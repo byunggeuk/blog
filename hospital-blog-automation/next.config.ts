@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["*"],
+  allowedDevOrigins: [
+    "*.replit.dev",
+    "*.repl.co",
+    "*.sisko.replit.dev",
+  ],
 };
 
 export default nextConfig;
