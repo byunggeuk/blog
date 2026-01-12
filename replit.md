@@ -25,5 +25,21 @@ A Next.js 16 application for hospital blog content automation. The system appear
 - **Build**: `npm run build`
 - **Start**: `npm start`
 
+## Authentication
+- **Provider**: Google OAuth via NextAuth.js
+- **Session Management**: next-auth session with JWT strategy
+- **Access Control**: Internal company employees only
+- **Environment Variables**: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, NEXTAUTH_URL, NEXTAUTH_SECRET
+
+## API Routes
+- `/api/auth/[...nextauth]` - NextAuth authentication endpoints
+- `/api/hospitals` - Hospital data from Google Sheets
+- `/api/requests` - Blog request management
+- `/api/process` - Auto-processing of pending requests (30s polling)
+- `/api/generate` - AI blog content generation
+- `/api/regenerate` - Content regeneration with chat context
+
 ## Recent Changes
+- January 12, 2026: Implemented production Google OAuth authentication, removed demo login
+- January 12, 2026: Added automatic processing with 30-second polling interval
 - January 12, 2026: Initial Replit setup and configuration
