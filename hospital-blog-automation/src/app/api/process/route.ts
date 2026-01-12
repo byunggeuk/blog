@@ -303,3 +303,4 @@ export async function GET() {
   // POST와 동일하게 처리 (Cron job 호환)
   return POST();
 }
+
