@@ -195,7 +195,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       const result = await response.json();
-      const docId = `doc${Date.now()}`;
+
+      // Google Drive에 마크다운 파일 저장
+      let fileId = '';
+      let fileUrl = '';
+      let fileVersion = 1;
+
+      try {
+        const fileName = `${data.target_keyword}_${requestId}`;
+        const driveResponse = await fetch('/api/docs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'create',
+            fileName: fileName,
+            content: result.content,
+            folderId: hospital?.output_folder_id,
+          }),
+        });
+
+        if (driveResponse.ok) {
+          const driveResult = await driveResponse.json();
+          fileId = driveResult.fileId;
+          fileUrl = driveResult.fileUrl;
+          fileVersion = driveResult.version;
+        }
+      } catch (driveError) {
+        console.error('Google Drive save error:', driveError);
+        // Drive 저장 실패해도 계속 진행 (content는 chat_history에 보관됨)
+      }
 
       // AI 응답 메시지 추가
       const assistantMessage: ChatMessage = {
@@ -203,7 +231,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         role: 'assistant',
         content: result.content,
         created_at: new Date().toISOString(),
-        doc_id: docId,
+        doc_id: fileId || `local_${Date.now()}`,
+        doc_url: fileUrl || undefined,
       };
 
       setState((prev) => ({
@@ -213,7 +242,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             ? {
                 ...r,
                 status: '완료' as const,
-                result_doc_id: docId,
+                result_doc_id: fileId || `local_${Date.now()}`,
+                result_doc_url: fileUrl || undefined,
                 completed_at: new Date().toISOString(),
                 chat_history: [...r.chat_history, assistantMessage],
               }
@@ -322,14 +352,63 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       const result = await response.json();
-      const docId = `doc${Date.now()}`;
+
+      // Google Drive 파일 업데이트 (새 버전 생성)
+      let fileId = request.result_doc_id || '';
+      let fileUrl = request.result_doc_url || '';
+      let fileVersion = request.revision_count + 1;
+
+      try {
+        if (fileId && !fileId.startsWith('local_')) {
+          // 기존 파일 업데이트
+          const driveResponse = await fetch('/api/docs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'update',
+              fileId: fileId,
+              content: result.content,
+            }),
+          });
+
+          if (driveResponse.ok) {
+            const driveResult = await driveResponse.json();
+            fileUrl = driveResult.fileUrl;
+            fileVersion = driveResult.version;
+          }
+        } else {
+          // 파일이 없으면 새로 생성
+          const hospital = mockHospitals.find((h) => h.hospital_id === request.hospital_id);
+          const fileName = `${request.target_keyword}_${requestId}`;
+          const driveResponse = await fetch('/api/docs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'create',
+              fileName: fileName,
+              content: result.content,
+              folderId: hospital?.output_folder_id,
+            }),
+          });
+
+          if (driveResponse.ok) {
+            const driveResult = await driveResponse.json();
+            fileId = driveResult.fileId;
+            fileUrl = driveResult.fileUrl;
+            fileVersion = driveResult.version;
+          }
+        }
+      } catch (driveError) {
+        console.error('Google Drive save error:', driveError);
+      }
 
       const assistantMessage: ChatMessage = {
         id: `msg_${Date.now()}_assistant`,
         role: 'assistant',
         content: result.content,
         created_at: new Date().toISOString(),
-        doc_id: docId,
+        doc_id: fileId || `local_${Date.now()}`,
+        doc_url: fileUrl || undefined,
       };
 
       setState((prev) => ({
@@ -339,7 +418,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             ? {
                 ...r,
                 status: '수정완료' as const,
-                result_doc_id: docId,
+                result_doc_id: fileId || r.result_doc_id,
+                result_doc_url: fileUrl || r.result_doc_url,
                 completed_at: new Date().toISOString(),
                 chat_history: [...r.chat_history, assistantMessage],
               }
