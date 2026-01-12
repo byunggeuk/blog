@@ -246,7 +246,7 @@ export function DashboardContent() {
                   <TableHead>병원</TableHead>
                   <TableHead>타겟 키워드</TableHead>
                   <TableHead>주제 키워드</TableHead>
-                  <TableHead className="w-[100px]">구조</TableHead>
+                  <TableHead className="w-[100px] text-center">구조</TableHead>
                   <TableHead className="min-w-[200px]">목적</TableHead>
                   <TableHead className="w-[100px]">상태</TableHead>
                   <TableHead className="w-[100px]">날짜</TableHead>
@@ -276,7 +276,7 @@ export function DashboardContent() {
                       <TableCell className="text-muted-foreground">
                         {request.topic_keyword}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
                         <Badge variant="outline" className="text-xs whitespace-nowrap">
                           {request.format_type}
                         </Badge>

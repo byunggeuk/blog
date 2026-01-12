@@ -238,7 +238,7 @@ export function RequestChatModal({
       <DialogContent className="sm:max-w-[900px] h-[90vh] flex flex-col p-0 gap-0">
         {/* Header */}
         <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between pr-8">
             <div className="flex items-center gap-3">
               <DialogTitle className="text-lg font-semibold">
                 {currentRequest.target_keyword}
