@@ -37,3 +37,9 @@ externalPort = 80
 deploymentTarget = "autoscale"
 run = ["npm", "start", "--", "-p", "5000", "-H", "0.0.0.0"]
 build = ["npm", "run", "build"]
+
+[userenv]
+
+[userenv.shared]
+NEXTAUTH_SECRET = "IIHhYT9XtC6IHulgiKc+Qc/NI23BUiuk7T+bJztYtYw="
+NEXTAUTH_URL = "https://b4799257-34a0-434e-a754-7c3fa813a714-00-344r4zm88ygbi.sisko.replit.dev"
