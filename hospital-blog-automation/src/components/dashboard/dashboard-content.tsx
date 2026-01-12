@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useApp } from '@/lib/store';
 import { BlogRequest, RequestStatus } from '@/types';
 import { NewRequestModal } from '@/components/requests/new-request-modal';
@@ -76,6 +76,41 @@ export function DashboardContent() {
 
     return { total, completed, inProgress, pending };
   }, [requests]);
+
+  // Auto-process pending requests
+  const isProcessingRef = useRef(false);
+  
+  useEffect(() => {
+    const processPendingRequests = async () => {
+      if (isProcessingRef.current) return;
+      
+      const hasPending = requests.some(r => r.status === '대기');
+      if (!hasPending) return;
+      
+      isProcessingRef.current = true;
+      try {
+        const response = await fetch('/api/process', { method: 'POST' });
+        if (response.ok) {
+          const result = await response.json();
+          if (result.processed > 0) {
+            refreshRequests();
+          }
+        }
+      } catch (error) {
+        console.error('Auto-process error:', error);
+      } finally {
+        isProcessingRef.current = false;
+      }
+    };
+
+    // Process immediately on mount and when requests change
+    processPendingRequests();
+
+    // Set up polling interval (every 30 seconds)
+    const interval = setInterval(processPendingRequests, 30000);
+    
+    return () => clearInterval(interval);
+  }, [requests, refreshRequests]);
 
   // Filtered requests
   const filteredRequests = useMemo(() => {
