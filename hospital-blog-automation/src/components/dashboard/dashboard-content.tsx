@@ -276,10 +276,12 @@ export function DashboardContent() {
                       <TableCell className="text-muted-foreground">
                         {request.topic_keyword}
                       </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="outline" className="text-xs whitespace-nowrap">
-                          {request.format_type}
-                        </Badge>
+                      <TableCell>
+                        <div className="flex justify-center">
+                          <Badge variant="outline" className="text-xs whitespace-nowrap">
+                            {request.format_type}
+                          </Badge>
+                        </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm max-w-[250px]">
                         <span className="line-clamp-2">{request.purpose}</span>
