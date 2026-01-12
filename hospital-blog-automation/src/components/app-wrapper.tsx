@@ -1,33 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { AppProvider, useApp } from '@/lib/store';
-import { LoginPage, PendingApprovalPage, BlockedUserPage } from '@/components/auth/login-page';
+import { LoginPage } from '@/components/auth/login-page';
 import { Dashboard } from '@/components/dashboard/dashboard';
 import { AdminLayout } from '@/components/admin/admin-layout';
+import { Loader2 } from 'lucide-react';
 
 function AppContent() {
-  const { authStatus, user } = useApp();
+  const { data: session, status } = useSession();
+  const { user } = useApp();
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <LoginPage />;
+  }
+
   const isAdmin = user?.role === 'admin';
 
-  // Handle different auth states
-  switch (authStatus) {
-    case 'unauthenticated':
-      return <LoginPage />;
-    case 'pending':
-      return <PendingApprovalPage />;
-    case 'blocked':
-      return <BlockedUserPage />;
-    case 'authenticated':
-      // Show admin layout with tabs for admin users
-      if (isAdmin) {
-        return <AdminLayout />;
-      }
-      // Regular user dashboard
-      return <Dashboard />;
-    default:
-      return <LoginPage />;
+  if (isAdmin) {
+    return <AdminLayout />;
   }
+
+  return <Dashboard />;
 }
 
 export function AppWrapper() {

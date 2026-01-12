@@ -1,34 +1,19 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
-import { BlogRequest, User, NewRequestFormData, SignUpFormData, UserStatus, ChatMessage, Hospital } from '@/types';
-import { mockCurrentUser, mockUsers } from './mock-data';
-
-// 인증 상태 타입
-type AuthStatus = 'unauthenticated' | 'pending' | 'blocked' | 'authenticated';
+import { useSession, signOut } from 'next-auth/react';
+import { BlogRequest, User, NewRequestFormData, ChatMessage, Hospital } from '@/types';
 
 interface AppState {
   user: User | null;
-  users: User[];
   hospitals: Hospital[];
   requests: BlogRequest[];
   isLoading: boolean;
-  authStatus: AuthStatus;
   dataSource: 'mock' | 'sheets';
 }
 
 interface AppContextType extends AppState {
-  // 인증 관련
-  login: (asAdmin?: boolean) => void;
   logout: () => void;
-  signUp: (data: SignUpFormData) => Promise<void>;
-
-  // 사용자 관리 (관리자)
-  approveUser: (userId: string) => void;
-  blockUser: (userId: string) => void;
-  unblockUser: (userId: string) => void;
-
-  // 요청 관련
   createRequest: (data: NewRequestFormData) => Promise<BlogRequest>;
   updateRequestStatus: (requestId: string, status: BlogRequest['status']) => void;
   sendMessage: (requestId: string, message: string) => void;
@@ -39,26 +24,43 @@ interface AppContextType extends AppState {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const { data: session } = useSession();
+  
   const [state, setState] = useState<AppState>({
     user: null,
-    users: mockUsers,
     hospitals: [],
     requests: [],
     isLoading: true,
-    authStatus: 'unauthenticated',
-    dataSource: 'mock',
+    dataSource: 'sheets',
   });
 
-  // 초기 데이터 로드
+  // Sync user from session
+  useEffect(() => {
+    if (session?.user) {
+      const sessionUser = session.user;
+      setState((prev) => ({
+        ...prev,
+        user: {
+          id: sessionUser.email || 'unknown',
+          email: sessionUser.email || '',
+          name: sessionUser.name || '',
+          role: 'admin',
+          status: 'approved',
+          created_at: new Date().toISOString(),
+        },
+      }));
+    } else {
+      setState((prev) => ({ ...prev, user: null }));
+    }
+  }, [session]);
+
   const loadInitialData = useCallback(async () => {
     setState((prev) => ({ ...prev, isLoading: true }));
 
     try {
-      // 병원 데이터 로드
       const hospitalsRes = await fetch('/api/hospitals');
       const hospitalsData = await hospitalsRes.json();
 
-      // 요청 데이터 로드
       const requestsRes = await fetch('/api/requests');
       const requestsData = await requestsRes.json();
 
@@ -66,7 +68,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...prev,
         hospitals: hospitalsData.hospitals || [],
         requests: requestsData.requests || [],
-        dataSource: hospitalsData.source || 'mock',
+        dataSource: hospitalsData.source || 'sheets',
         isLoading: false,
       }));
     } catch (error) {
@@ -75,111 +77,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
     loadInitialData();
   }, [loadInitialData]);
 
-  // 데이터 새로고침
   const refreshData = useCallback(async () => {
     await loadInitialData();
   }, [loadInitialData]);
 
-  // 로그인
-  const login = useCallback((asAdmin: boolean = true) => {
-    if (asAdmin) {
-      setState((prev) => ({
-        ...prev,
-        user: mockCurrentUser,
-        authStatus: 'authenticated',
-      }));
-    } else {
-      const approvedUser = mockUsers.find((u) => u.role === 'user' && u.status === 'approved');
-      if (approvedUser) {
-        setState((prev) => ({
-          ...prev,
-          user: approvedUser,
-          authStatus: 'authenticated',
-        }));
-      }
-    }
-  }, []);
-
   const logout = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      user: null,
-      authStatus: 'unauthenticated',
-    }));
+    signOut({ callbackUrl: '/' });
   }, []);
 
-  // 회원가입
-  const signUp = useCallback(
-    async (data: SignUpFormData): Promise<void> => {
-      const existingUser = state.users.find((u) => u.email === data.email);
-      if (existingUser) {
-        throw new Error('이미 등록된 이메일입니다.');
-      }
-
-      const newUser: User = {
-        id: `U${String(state.users.length + 1).padStart(3, '0')}`,
-        email: data.email,
-        name: data.name,
-        role: 'user',
-        status: 'pending',
-        created_at: new Date().toISOString(),
-      };
-
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      setState((prev) => ({
-        ...prev,
-        users: [...prev.users, newUser],
-        user: newUser,
-        authStatus: 'pending',
-      }));
-    },
-    [state.users]
-  );
-
-  // 사용자 승인
-  const approveUser = useCallback((userId: string) => {
-    setState((prev) => ({
-      ...prev,
-      users: prev.users.map((u) =>
-        u.id === userId ? { ...u, status: 'approved' as UserStatus, approved_at: new Date().toISOString() } : u
-      ),
-    }));
-  }, []);
-
-  // 사용자 차단
-  const blockUser = useCallback((userId: string) => {
-    setState((prev) => ({
-      ...prev,
-      users: prev.users.map((u) =>
-        u.id === userId ? { ...u, status: 'blocked' as UserStatus, blocked_at: new Date().toISOString() } : u
-      ),
-    }));
-  }, []);
-
-  // 사용자 차단 해제
-  const unblockUser = useCallback((userId: string) => {
-    setState((prev) => ({
-      ...prev,
-      users: prev.users.map((u) =>
-        u.id === userId ? { ...u, status: 'approved' as UserStatus, blocked_at: undefined } : u
-      ),
-    }));
-  }, []);
-
-  // 새 요청 생성
   const createRequest = useCallback(
     async (data: NewRequestFormData): Promise<BlogRequest> => {
       const hospital = state.hospitals.find((h) => h.hospital_id === data.hospital_id);
       const now = new Date().toISOString();
       const requestId = `R${now.slice(0, 10).replace(/-/g, '')}${String(state.requests.length + 1).padStart(3, '0')}`;
 
-      // 초기 시스템 메시지
       const systemMessage: ChatMessage = {
         id: `msg_${Date.now()}_1`,
         role: 'system',
@@ -203,13 +118,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         chat_history: [systemMessage],
       };
 
-      // 로컬 상태 업데이트
       setState((prev) => ({
         ...prev,
         requests: [newRequest, ...prev.requests],
       }));
 
-      // API에 저장
       try {
         await fetch('/api/requests', {
           method: 'POST',
@@ -220,10 +133,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.error('요청 저장 실패:', error);
       }
 
-      // 상태를 '생성중'으로 변경
       setTimeout(() => updateRequestStatus(requestId, '생성중'), 100);
 
-      // Claude API 호출
       try {
         const response = await fetch('/api/chat', {
           method: 'POST',
@@ -248,7 +159,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         const result = await response.json();
 
-        // Google Drive에 마크다운 파일 저장
         let fileId = '';
         let fileUrl = '';
 
@@ -274,7 +184,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           console.error('Google Drive 저장 실패:', driveError);
         }
 
-        // AI 응답 메시지
         const assistantMessage: ChatMessage = {
           id: `msg_${Date.now()}_2`,
           role: 'assistant',
@@ -293,13 +202,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
           chat_history: [...newRequest.chat_history, assistantMessage],
         };
 
-        // 로컬 상태 업데이트
         setState((prev) => ({
           ...prev,
           requests: prev.requests.map((r) => (r.request_id === requestId ? updatedRequest : r)),
         }));
 
-        // API에 업데이트
         try {
           await fetch('/api/requests', {
             method: 'PUT',
@@ -330,7 +237,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           requests: prev.requests.map((r) => (r.request_id === requestId ? errorRequest : r)),
         }));
 
-        // API에 에러 상태 업데이트
         try {
           await fetch('/api/requests', {
             method: 'PUT',
@@ -347,7 +253,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [state.hospitals, state.requests.length, state.user?.email]
   );
 
-  // 요청 상태 업데이트
   const updateRequestStatus = useCallback((requestId: string, status: BlogRequest['status']) => {
     setState((prev) => ({
       ...prev,
@@ -355,7 +260,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  // 채팅 메시지 전송
   const sendMessage = useCallback(
     async (requestId: string, message: string) => {
       const now = new Date().toISOString();
@@ -364,7 +268,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const hospital = state.hospitals.find((h) => h.hospital_id === request.hospital_id);
 
-      // 사용자 메시지 추가
       const userMessage: ChatMessage = {
         id: `msg_${Date.now()}_user`,
         role: 'user',
@@ -385,7 +288,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         requests: prev.requests.map((r) => (r.request_id === requestId ? updatedRequest : r)),
       }));
 
-      // Claude API 호출
       try {
         const previousMessages = request.chat_history
           .filter((msg) => msg.role === 'user' || msg.role === 'assistant')
@@ -419,7 +321,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         const result = await response.json();
 
-        // Google Drive 파일 업데이트
         let fileId = request.result_doc_id || '';
         let fileUrl = request.result_doc_url || '';
 
@@ -485,7 +386,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           requests: prev.requests.map((r) => (r.request_id === requestId ? completedRequest : r)),
         }));
 
-        // API에 업데이트
         try {
           await fetch('/api/requests', {
             method: 'PUT',
@@ -520,7 +420,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [state.requests, state.hospitals]
   );
 
-  // 요청 목록 새로고침
   const refreshRequests = useCallback(async () => {
     setState((prev) => ({ ...prev, isLoading: true }));
     try {
@@ -541,12 +440,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <AppContext.Provider
       value={{
         ...state,
-        login,
         logout,
-        signUp,
-        approveUser,
-        blockUser,
-        unblockUser,
         createRequest,
         updateRequestStatus,
         sendMessage,
