@@ -1,4 +1,4 @@
- import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
   import { google } from 'googleapis';
   import Anthropic from '@anthropic-ai/sdk';
 
@@ -54,7 +54,6 @@
   ) {
     const updates: any[] = [];
 
-    // 상태 업데이트 (J열 = 10번째)
     updates.push({
       range: `요청목록!J${rowIndex}`,
       values: [[status]],
@@ -89,28 +88,36 @@
     content: string,
     folderId?: string
   ) {
+    // 1. 파일 먼저 생성 (부모 폴더 없이)
     const fileMetadata: any = {
       name: `${fileName}.md`,
       mimeType: 'text/markdown',
     };
 
-    if (folderId) {
-      fileMetadata.parents = [folderId];
-    }
-
-    const response = await drive.files.create({
+    const createResponse = await drive.files.create({
       requestBody: fileMetadata,
       media: {
         mimeType: 'text/markdown',
         body: content,
       },
       fields: 'id, webViewLink',
-      supportsAllDrives: true,
     });
 
+    const fileId = createResponse.data.id;
+
+    // 2. 폴더로 이동
+    if (folderId && fileId) {
+      await drive.files.update({
+        fileId: fileId,
+        addParents: folderId,
+        fields: 'id, webViewLink',
+        supportsAllDrives: true,
+      });
+    }
+
     return {
-      fileId: response.data.id,
-      fileUrl: response.data.webViewLink,
+      fileId: createResponse.data.id,
+      fileUrl: createResponse.data.webViewLink,
     };
   }
 
@@ -190,12 +197,11 @@
 
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
-        const status = row[9] || ''; // J열: status
+        const status = row[9] || '';
 
-        // 대기 상태인 요청만 처리
         if (status !== '대기') continue;
 
-        const rowIndex = i + 2; // 실제 시트 행 번호 (헤더 + 0-index)
+        const rowIndex = i + 2;
         const requestId = row[0] || '';
         const hospitalId = row[2] || '';
         const targetKeyword = row[4] || '';
@@ -205,10 +211,8 @@
         const formatCustom = row[8] || '';
 
         try {
-          // 상태를 '생성중'으로 변경
           await updateRequestStatus(sheets, spreadsheetId, rowIndex, '생성중');
 
-          // 병원 정보 가져오기
           const hospital = await getHospitalById(sheets, spreadsheetId, hospitalId);
           if (!hospital) {
             await updateRequestStatus(sheets, spreadsheetId, rowIndex, '에러');
@@ -216,7 +220,6 @@
             continue;
           }
 
-          // Claude로 글 생성
           const content = await generateBlogContent(
             hospital.hospital_name,
             hospital.system_prompt,
@@ -227,7 +230,6 @@
             formatCustom
           );
 
-          // Google Drive에 저장
           const fileName = `${targetKeyword}_${requestId}`;
           const { fileId, fileUrl } = await createMarkdownFile(
             drive,
@@ -236,7 +238,6 @@
             hospital.output_folder_id
           );
 
-          // 채팅 히스토리 생성
           const now = new Date().toISOString();
           const chatHistory = JSON.stringify([
             {
@@ -255,7 +256,6 @@
             },
           ]);
 
-          // 완료 상태로 업데이트
           await updateRequestStatus(
             sheets,
             spreadsheetId,
@@ -298,8 +298,6 @@
     }
   }
 
-  // GET: 처리 상태 확인 (Vercel Cron에서 사용 가능)
   export async function GET() {
-    // POST와 동일하게 처리 (Cron job 호환)
     return POST();
   }
