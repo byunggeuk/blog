@@ -88,10 +88,14 @@ import { NextResponse } from 'next/server';
     content: string,
     folderId?: string
   ) {
-    // 1. 파일 먼저 생성 (부모 폴더 없이)
+    if (!folderId) {
+      throw new Error('output_folder_id가 설정되지 않았습니다. 병원설정에서 출력 폴더 ID를 확인해주세요.');
+    }
+
     const fileMetadata: any = {
       name: `${fileName}.md`,
       mimeType: 'text/markdown',
+      parents: [folderId],
     };
 
     const createResponse = await drive.files.create({
@@ -101,19 +105,8 @@ import { NextResponse } from 'next/server';
         body: content,
       },
       fields: 'id, webViewLink',
+      supportsAllDrives: true,
     });
-
-    const fileId = createResponse.data.id;
-
-    // 2. 폴더로 이동
-    if (folderId && fileId) {
-      await drive.files.update({
-        fileId: fileId,
-        addParents: folderId,
-        fields: 'id, webViewLink',
-        supportsAllDrives: true,
-      });
-    }
 
     return {
       fileId: createResponse.data.id,
