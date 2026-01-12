@@ -105,6 +105,7 @@ async function createMarkdownFile(
       body: content,
     },
     fields: 'id, webViewLink',
+    supportsAllDrives: true,
   });
 
   return {

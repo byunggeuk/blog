@@ -57,6 +57,7 @@ export async function createMarkdownFile(
       body: content,
     },
     fields: 'id, name, webViewLink, version',
+    supportsAllDrives: true,
   });
 
   const fileId = response.data.id;
@@ -71,6 +72,7 @@ export async function createMarkdownFile(
       role: 'reader',
       type: 'anyone',
     },
+    supportsAllDrives: true,
   });
 
   return {
@@ -98,6 +100,7 @@ export async function updateMarkdownFile(
     },
     fields: 'id, name, webViewLink, version',
     keepRevisionForever: true,
+    supportsAllDrives: true,
   });
 
   // 현재 버전 번호 가져오기
