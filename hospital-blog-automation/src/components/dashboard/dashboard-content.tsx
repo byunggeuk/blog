@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import { useApp } from '@/lib/store';
-import { mockHospitals } from '@/lib/mock-data';
 import { BlogRequest, RequestStatus } from '@/types';
 import { NewRequestModal } from '@/components/requests/new-request-modal';
 import { RequestChatModal } from '@/components/requests/request-chat-modal';
@@ -53,7 +52,7 @@ const statusConfig: Record<
 type DateFilter = 'all' | '7days' | '30days' | 'today';
 
 export function DashboardContent() {
-  const { requests, isLoading, refreshRequests } = useApp();
+  const { requests, hospitals, isLoading, refreshRequests } = useApp();
   const [showNewRequestModal, setShowNewRequestModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<BlogRequest | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -195,7 +194,7 @@ export function DashboardContent() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">전체 병원</SelectItem>
-              {mockHospitals.map((hospital) => (
+              {hospitals.map((hospital) => (
                 <SelectItem key={hospital.hospital_id} value={hospital.hospital_id}>
                   {hospital.hospital_name}
                 </SelectItem>
