@@ -60,16 +60,16 @@ import { NextResponse } from 'next/server';
     });
 
     if (resultDocId) {
-      updates.push({ range: `요청목록!M${rowIndex}`, values: [[resultDocId]] });
+      updates.push({ range: `요청목록!K${rowIndex}`, values: [[resultDocId]] });
     }
     if (resultDocUrl) {
-      updates.push({ range: `요청목록!N${rowIndex}`, values: [[resultDocUrl]] });
+      updates.push({ range: `요청목록!L${rowIndex}`, values: [[resultDocUrl]] });
     }
     if (completedAt) {
-      updates.push({ range: `요청목록!O${rowIndex}`, values: [[completedAt]] });
+      updates.push({ range: `요청목록!N${rowIndex}`, values: [[completedAt]] });
     }
     if (chatHistory) {
-      updates.push({ range: `요청목록!P${rowIndex}`, values: [[chatHistory]] });
+      updates.push({ range: `요청목록!O${rowIndex}`, values: [[chatHistory]] });
     }
 
     await sheets.spreadsheets.values.batchUpdate({
