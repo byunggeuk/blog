@@ -13,6 +13,11 @@ function getSpreadsheetId() {
   return process.env.GOOGLE_SPREADSHEET_ID || '';
 }
 
+// 사용자 관리용 별도 스프레드시트
+function getUsersSpreadsheetId() {
+  return process.env.GOOGLE_USERS_SPREADSHEET_ID || '';
+}
+
 export async function POST() {
   try {
     if (!process.env.GOOGLE_SERVICE_ACCOUNT_KEY || !process.env.GOOGLE_SPREADSHEET_ID) {
@@ -56,12 +61,35 @@ export async function POST() {
       });
     }
 
-    // 시트 추가 실행
+    // 메인 시트 추가 실행
     if (requests.length > 0) {
       await sheets.spreadsheets.batchUpdate({
         spreadsheetId,
         requestBody: { requests },
       });
+    }
+
+    // 사용자 관리용 별도 스프레드시트 설정
+    const usersSpreadsheetId = getUsersSpreadsheetId();
+    if (usersSpreadsheetId) {
+      const usersSpreadsheet = await sheets.spreadsheets.get({ spreadsheetId: usersSpreadsheetId });
+      const existingUsersSheets = usersSpreadsheet.data.sheets?.map(s => s.properties?.title) || [];
+
+      if (!existingUsersSheets.includes('사용자')) {
+        await sheets.spreadsheets.batchUpdate({
+          spreadsheetId: usersSpreadsheetId,
+          requestBody: {
+            requests: [{
+              addSheet: {
+                properties: {
+                  title: '사용자',
+                  gridProperties: { rowCount: 100, columnCount: 8 },
+                },
+              },
+            }],
+          },
+        });
+      }
     }
 
     // 병원설정 헤더 추가
@@ -87,6 +115,20 @@ export async function POST() {
       valueInputOption: 'RAW',
       requestBody: { values: requestHeaders },
     });
+
+    // 사용자 헤더 추가 (별도 스프레드시트)
+    if (usersSpreadsheetId) {
+      const userHeaders = [
+        ['id', 'email', 'name', 'role', 'status', 'created_at', 'approved_at', 'blocked_at'],
+      ];
+
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: usersSpreadsheetId,
+        range: '사용자!A1:H1',
+        valueInputOption: 'RAW',
+        requestBody: { values: userHeaders },
+      });
+    }
 
     // 헤더 스타일링 (굵게, 배경색)
     const sheetInfo = await sheets.spreadsheets.get({ spreadsheetId });
@@ -148,10 +190,46 @@ export async function POST() {
       });
     }
 
+    // 사용자 시트 스타일링 (별도 스프레드시트)
+    if (usersSpreadsheetId) {
+      const usersSheetInfo = await sheets.spreadsheets.get({ spreadsheetId: usersSpreadsheetId });
+      const userSheetId = usersSheetInfo.data.sheets?.find(s => s.properties?.title === '사용자')?.properties?.sheetId;
+
+      if (userSheetId !== undefined) {
+        await sheets.spreadsheets.batchUpdate({
+          spreadsheetId: usersSpreadsheetId,
+          requestBody: {
+            requests: [
+              {
+                repeatCell: {
+                  range: { sheetId: userSheetId, startRowIndex: 0, endRowIndex: 1 },
+                  cell: {
+                    userEnteredFormat: {
+                      backgroundColor: { red: 0.6, green: 0.2, blue: 0.6 },
+                      textFormat: { bold: true, foregroundColor: { red: 1, green: 1, blue: 1 } },
+                    },
+                  },
+                  fields: 'userEnteredFormat(backgroundColor,textFormat)',
+                },
+              },
+              {
+                updateDimensionProperties: {
+                  range: { sheetId: userSheetId, dimension: 'COLUMNS', startIndex: 0, endIndex: 8 },
+                  properties: { pixelSize: 150 },
+                  fields: 'pixelSize',
+                },
+              },
+            ],
+          },
+        });
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: '시트 구조가 성공적으로 생성되었습니다.',
-      sheets: ['병원설정', '요청목록'],
+      mainSheets: ['병원설정', '요청목록'],
+      usersSheet: usersSpreadsheetId ? '사용자 (별도 스프레드시트)' : '미설정',
     });
   } catch (error) {
     console.error('Setup API Error:', error);

@@ -59,12 +59,12 @@ export function Header({ currentTab = 'dashboard', onTabChange }: HeaderProps) {
         </div>
 
         {isAuthenticated && user && (
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 gap-2 px-2">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                    {user.name.charAt(0)}
+                    {user.name?.charAt(0) || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <span className="hidden sm:inline text-sm font-medium">{user.name}</span>
@@ -76,7 +76,7 @@ export function Header({ currentTab = 'dashboard', onTabChange }: HeaderProps) {
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuContent className="w-56 z-[100]" align="end" sideOffset={8}>
               <div className="flex items-center justify-start gap-2 p-2">
                 <div className="flex flex-col space-y-1 leading-none">
                   <div className="flex items-center gap-2">
@@ -89,18 +89,18 @@ export function Header({ currentTab = 'dashboard', onTabChange }: HeaderProps) {
                 </div>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => {}}>
                 <User className="mr-2 h-4 w-4" />
                 <span>프로필</span>
               </DropdownMenuItem>
               {isAdmin && (
-                <DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => {}}>
                   <Settings className="mr-2 h-4 w-4" />
                   <span>병원 설정</span>
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout} className="text-destructive">
+              <DropdownMenuItem onSelect={logout} className="text-destructive">
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>로그아웃</span>
               </DropdownMenuItem>

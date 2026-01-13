@@ -5,11 +5,12 @@ import { AppProvider, useApp } from '@/lib/store';
 import { LoginPage } from '@/components/auth/login-page';
 import { Dashboard } from '@/components/dashboard/dashboard';
 import { AdminLayout } from '@/components/admin/admin-layout';
+import { AccessDenied } from '@/components/auth/access-denied';
 import { Loader2 } from 'lucide-react';
 
 function AppContent() {
   const { data: session, status } = useSession();
-  const { user } = useApp();
+  const { user, authStatus } = useApp();
 
   if (status === 'loading') {
     return (
@@ -21,6 +22,11 @@ function AppContent() {
 
   if (!session) {
     return <LoginPage />;
+  }
+
+  // 승인 대기 또는 차단된 사용자
+  if (authStatus === 'pending' || authStatus === 'blocked') {
+    return <AccessDenied />;
   }
 
   const isAdmin = user?.role === 'admin';

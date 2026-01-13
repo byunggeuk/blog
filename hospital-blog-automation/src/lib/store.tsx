@@ -43,41 +43,95 @@ export function AppProvider({ children }: { children: ReactNode }) {
     authStatus: 'unauthenticated',
   });
 
-  // Sync user from session
+  // Sync user from session and register/check user in DB
   useEffect(() => {
-    if (session?.user) {
-      const sessionUser = session.user;
-      setState((prev) => ({
-        ...prev,
-        user: {
-          id: sessionUser.email || 'unknown',
-          email: sessionUser.email || '',
-          name: sessionUser.name || '',
-          role: 'admin',
-          status: 'approved',
-          created_at: new Date().toISOString(),
-        },
-        authStatus: 'authenticated',
-      }));
-    } else {
-      setState((prev) => ({ ...prev, user: null, authStatus: 'unauthenticated' }));
-    }
+    const syncUser = async () => {
+      if (session?.user) {
+        const sessionUser = session.user;
+
+        try {
+          // Register or get existing user from DB
+          const response = await fetch('/api/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: sessionUser.email,
+              name: sessionUser.name,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (data.user) {
+            const dbUser = data.user;
+            let authStatus: AuthStatus = 'unauthenticated';
+
+            if (dbUser.status === 'approved') {
+              authStatus = 'authenticated';
+            } else if (dbUser.status === 'pending') {
+              authStatus = 'pending';
+            } else if (dbUser.status === 'blocked') {
+              authStatus = 'blocked';
+            }
+
+            setState((prev) => ({
+              ...prev,
+              user: {
+                id: dbUser.id,
+                email: dbUser.email,
+                name: dbUser.name,
+                role: dbUser.role,
+                status: dbUser.status,
+                created_at: dbUser.created_at,
+                approved_at: dbUser.approved_at,
+                blocked_at: dbUser.blocked_at,
+              },
+              authStatus,
+            }));
+          }
+        } catch (error) {
+          console.error('사용자 동기화 실패:', error);
+          // Fallback to basic session user
+          setState((prev) => ({
+            ...prev,
+            user: {
+              id: sessionUser.email || 'unknown',
+              email: sessionUser.email || '',
+              name: sessionUser.name || '',
+              role: 'user',
+              status: 'pending',
+              created_at: new Date().toISOString(),
+            },
+            authStatus: 'pending',
+          }));
+        }
+      } else {
+        setState((prev) => ({ ...prev, user: null, authStatus: 'unauthenticated' }));
+      }
+    };
+
+    syncUser();
   }, [session]);
 
   const loadInitialData = useCallback(async () => {
     setState((prev) => ({ ...prev, isLoading: true }));
 
     try {
-      const hospitalsRes = await fetch('/api/hospitals');
-      const hospitalsData = await hospitalsRes.json();
+      const [hospitalsRes, requestsRes, usersRes] = await Promise.all([
+        fetch('/api/hospitals'),
+        fetch('/api/requests'),
+        fetch('/api/users'),
+      ]);
 
-      const requestsRes = await fetch('/api/requests');
+      const hospitalsData = await hospitalsRes.json();
       const requestsData = await requestsRes.json();
+      const usersData = await usersRes.json();
 
       setState((prev) => ({
         ...prev,
         hospitals: hospitalsData.hospitals || [],
         requests: requestsData.requests || [],
+        users: usersData.users || [],
         dataSource: hospitalsData.source || 'sheets',
         isLoading: false,
       }));
@@ -446,31 +500,67 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const approveUser = useCallback((userId: string) => {
-    setState((prev) => ({
-      ...prev,
-      users: prev.users.map((u) =>
-        u.id === userId ? { ...u, status: 'approved' as const, approved_at: new Date().toISOString() } : u
-      ),
-    }));
+  const approveUser = useCallback(async (userId: string) => {
+    try {
+      const response = await fetch('/api/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, action: 'approve' }),
+      });
+
+      if (response.ok) {
+        setState((prev) => ({
+          ...prev,
+          users: prev.users.map((u) =>
+            u.id === userId ? { ...u, status: 'approved' as const, approved_at: new Date().toISOString() } : u
+          ),
+        }));
+      }
+    } catch (error) {
+      console.error('사용자 승인 실패:', error);
+    }
   }, []);
 
-  const blockUser = useCallback((userId: string) => {
-    setState((prev) => ({
-      ...prev,
-      users: prev.users.map((u) =>
-        u.id === userId ? { ...u, status: 'blocked' as const, blocked_at: new Date().toISOString() } : u
-      ),
-    }));
+  const blockUser = useCallback(async (userId: string) => {
+    try {
+      const response = await fetch('/api/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, action: 'block' }),
+      });
+
+      if (response.ok) {
+        setState((prev) => ({
+          ...prev,
+          users: prev.users.map((u) =>
+            u.id === userId ? { ...u, status: 'blocked' as const, blocked_at: new Date().toISOString() } : u
+          ),
+        }));
+      }
+    } catch (error) {
+      console.error('사용자 차단 실패:', error);
+    }
   }, []);
 
-  const unblockUser = useCallback((userId: string) => {
-    setState((prev) => ({
-      ...prev,
-      users: prev.users.map((u) =>
-        u.id === userId ? { ...u, status: 'approved' as const, blocked_at: undefined } : u
-      ),
-    }));
+  const unblockUser = useCallback(async (userId: string) => {
+    try {
+      const response = await fetch('/api/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, action: 'unblock' }),
+      });
+
+      if (response.ok) {
+        setState((prev) => ({
+          ...prev,
+          users: prev.users.map((u) =>
+            u.id === userId ? { ...u, status: 'approved' as const, blocked_at: undefined } : u
+          ),
+        }));
+      }
+    } catch (error) {
+      console.error('차단 해제 실패:', error);
+    }
   }, []);
 
   return (
