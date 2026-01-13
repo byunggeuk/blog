@@ -190,39 +190,38 @@ export async function POST() {
       return NextResponse.json({ message: '데이터가 없습니다.', migrated: 0 });
     }
 
-    // 올바른 헤더 순서
+    // 새로운 헤더 순서 (created_by를 status 다음에 배치)
     const correctHeader = [
       'request_id', 'created_at', 'hospital_id', 'hospital_name',
       'target_keyword', 'topic_keyword', 'purpose', 'format_type',
-      'format_custom', 'status', 'result_doc_id', 'result_doc_url',
-      'revision_count', 'completed_at', 'chat_history', 'created_by'
+      'format_custom', 'status', 'created_by', 'result_doc_id', 'result_doc_url',
+      'revision_count', 'completed_at', 'chat_history'
     ];
 
-    // 이전 잘못된 순서 (setup API의 원래 순서)
-    // 0-9는 동일: request_id, created_at, hospital_id, hospital_name, target_keyword, topic_keyword, purpose, format_type, format_custom, status
-    // 10: revision_count (잘못됨, result_doc_id여야 함)
-    // 11: created_by (잘못됨, result_doc_url이어야 함)
-    // 12: result_doc_id (잘못됨, revision_count여야 함)
-    // 13: result_doc_url (잘못됨, completed_at이어야 함)
-    // 14: completed_at (잘못됨, chat_history여야 함)
-    // 15: chat_history (잘못됨, created_by여야 함)
+    // 이전 순서 (마이그레이션 전):
+    // 0-9: request_id, created_at, hospital_id, hospital_name, target_keyword, topic_keyword, purpose, format_type, format_custom, status
+    // 10: result_doc_id
+    // 11: result_doc_url
+    // 12: revision_count
+    // 13: completed_at
+    // 14: chat_history
+    // 15: created_by
 
-    // 데이터 재정렬 (하드코딩으로 강제 매핑)
+    // 새로운 순서:
+    // 0-9: 동일
+    // 10: created_by (이전 15)
+    // 11: result_doc_id (이전 10)
+    // 12: result_doc_url (이전 11)
+    // 13: revision_count (이전 12)
+    // 14: completed_at (이전 13)
+    // 15: chat_history (이전 14)
+
+    // 데이터 재정렬
     const migratedRows = rows.map((row, rowIndex) => {
       if (rowIndex === 0) {
-        // 헤더 행
         return correctHeader;
       }
 
-      // 현재 시트 상태 분석 결과:
-      // [10] result_doc_id 위치에 → "1" (revision_count 값)
-      // [11] result_doc_url 위치에 → 날짜 (completed_at 값)
-      // [12] revision_count 위치에 → doc_id
-      // [13] completed_at 위치에 → chat_history JSON
-      // [14] chat_history 위치에 → 빈 값
-      // [15] created_by 위치에 → doc_url
-
-      // 올바른 재매핑:
       return [
         row[0] || '',   // 0: request_id
         row[1] || '',   // 1: created_at
@@ -234,12 +233,12 @@ export async function POST() {
         row[7] || '',   // 7: format_type
         row[8] || '',   // 8: format_custom
         row[9] || '',   // 9: status
-        row[12] || '',  // 10: result_doc_id ← 현재 [12]에 있는 doc_id
-        row[15] || '',  // 11: result_doc_url ← 현재 [15]에 있는 doc_url
-        row[10] || '',  // 12: revision_count ← 현재 [10]에 있는 "1"
-        row[11] || '',  // 13: completed_at ← 현재 [11]에 있는 날짜
-        row[13] || '',  // 14: chat_history ← 현재 [13]에 있는 JSON
-        '',             // 15: created_by ← 기존 데이터에 없음 (빈 값으로)
+        row[15] || '',  // 10: created_by ← 이전 인덱스 15
+        row[10] || '',  // 11: result_doc_id ← 이전 인덱스 10
+        row[11] || '',  // 12: result_doc_url ← 이전 인덱스 11
+        row[12] || '',  // 13: revision_count ← 이전 인덱스 12
+        row[13] || '',  // 14: completed_at ← 이전 인덱스 13
+        row[14] || '',  // 15: chat_history ← 이전 인덱스 14
       ];
     });
 

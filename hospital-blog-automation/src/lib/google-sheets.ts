@@ -174,11 +174,11 @@ export async function getRequests(): Promise<BlogRequest[]> {
   const rows = response.data.values || [];
 
   return rows.map((row) => {
-    // 채팅 히스토리는 JSON으로 저장됨
+    // 채팅 히스토리는 JSON으로 저장됨 (인덱스 15)
     let chatHistory: ChatMessage[] = [];
     try {
-      if (row[14]) {
-        chatHistory = JSON.parse(row[14]);
+      if (row[15]) {
+        chatHistory = JSON.parse(row[15]);
       }
     } catch {
       chatHistory = [];
@@ -195,12 +195,12 @@ export async function getRequests(): Promise<BlogRequest[]> {
       format_type: (row[7] || 'Q&A형') as FormatType,
       format_custom: row[8] || undefined,
       status: (row[9] || '대기') as RequestStatus,
-      result_doc_id: row[10] || undefined,
-      result_doc_url: row[11] || undefined,
-      revision_count: parseInt(row[12] || '0', 10),
-      completed_at: row[13] || undefined,
+      created_by: row[10] || '',
+      result_doc_id: row[11] || undefined,
+      result_doc_url: row[12] || undefined,
+      revision_count: parseInt(row[13] || '0', 10),
+      completed_at: row[14] || undefined,
       chat_history: chatHistory,
-      created_by: row[15] || '',
     };
   });
 }
@@ -211,6 +211,9 @@ export async function addRequest(request: BlogRequest): Promise<void> {
   const sheets = google.sheets({ version: 'v4', auth });
   const spreadsheetId = getSpreadsheetId();
 
+  // 컬럼 순서: request_id, created_at, hospital_id, hospital_name, target_keyword, topic_keyword,
+  // purpose, format_type, format_custom, status, created_by, result_doc_id, result_doc_url,
+  // revision_count, completed_at, chat_history
   const row = [
     request.request_id,
     request.created_at,
@@ -222,12 +225,12 @@ export async function addRequest(request: BlogRequest): Promise<void> {
     request.format_type,
     request.format_custom || '',
     request.status,
+    request.created_by,
     request.result_doc_id || '',
     request.result_doc_url || '',
     request.revision_count.toString(),
     request.completed_at || '',
     JSON.stringify(request.chat_history),
-    request.created_by,
   ];
 
   await sheets.spreadsheets.values.append({
@@ -261,6 +264,9 @@ export async function updateRequest(request: BlogRequest): Promise<void> {
 
   const rowNumber = rowIndex + 1; // 1-based index
 
+  // 컬럼 순서: request_id, created_at, hospital_id, hospital_name, target_keyword, topic_keyword,
+  // purpose, format_type, format_custom, status, created_by, result_doc_id, result_doc_url,
+  // revision_count, completed_at, chat_history
   const row = [
     request.request_id,
     request.created_at,
@@ -272,12 +278,12 @@ export async function updateRequest(request: BlogRequest): Promise<void> {
     request.format_type,
     request.format_custom || '',
     request.status,
+    request.created_by,
     request.result_doc_id || '',
     request.result_doc_url || '',
     request.revision_count.toString(),
     request.completed_at || '',
     JSON.stringify(request.chat_history),
-    request.created_by,
   ];
 
   await sheets.spreadsheets.values.update({
@@ -322,20 +328,22 @@ export async function updateRequestStatus(
   const currentRow = rows[rowIndex];
 
   // 업데이트할 값들
+  // 컬럼 인덱스: status(9), created_by(10), result_doc_id(11), result_doc_url(12),
+  // revision_count(13), completed_at(14), chat_history(15)
   const updatedRow = [...currentRow];
   updatedRow[9] = status; // status
 
   if (additionalData?.result_doc_id) {
-    updatedRow[10] = additionalData.result_doc_id;
+    updatedRow[11] = additionalData.result_doc_id;
   }
   if (additionalData?.result_doc_url) {
-    updatedRow[11] = additionalData.result_doc_url;
+    updatedRow[12] = additionalData.result_doc_url;
   }
   if (additionalData?.completed_at) {
-    updatedRow[13] = additionalData.completed_at;
+    updatedRow[14] = additionalData.completed_at;
   }
   if (additionalData?.chat_history) {
-    updatedRow[14] = JSON.stringify(additionalData.chat_history);
+    updatedRow[15] = JSON.stringify(additionalData.chat_history);
   }
 
   await sheets.spreadsheets.values.update({
