@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getRequests, addRequest, updateRequest } from '@/lib/google-sheets';
 import { mockRequests } from '@/lib/mock-data';
 import { BlogRequest } from '@/types';
+import {
+  notifyNewRequest,
+  notifyRequestCompleted,
+  notifyRevisionRequested,
+  notifyRevisionCompleted,
+  notifyError,
+} from '@/lib/slack';
 
 // GET: 모든 요청 가져오기
 export async function GET() {
@@ -34,6 +41,17 @@ export async function POST(request: NextRequest) {
     // Google Sheets 연동이 설정되어 있으면 시트에 추가
     if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY && process.env.GOOGLE_SPREADSHEET_ID) {
       await addRequest(body);
+
+      // Slack 알림 발송 (비동기, 실패해도 무시)
+      notifyNewRequest({
+        requestId: body.request_id,
+        hospitalName: body.hospital_name,
+        targetKeyword: body.target_keyword,
+        topicKeyword: body.topic_keyword,
+        formatType: body.format_type,
+        createdBy: body.created_by,
+      }).catch(console.error);
+
       return NextResponse.json({ success: true, source: 'sheets' });
     }
 
@@ -56,6 +74,48 @@ export async function PUT(request: NextRequest) {
     // Google Sheets 연동이 설정되어 있으면 시트 업데이트
     if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY && process.env.GOOGLE_SPREADSHEET_ID) {
       await updateRequest(body);
+
+      // 상태에 따른 Slack 알림 발송 (비동기, 실패해도 무시)
+      switch (body.status) {
+        case '완료':
+          notifyRequestCompleted({
+            requestId: body.request_id,
+            hospitalName: body.hospital_name,
+            targetKeyword: body.target_keyword,
+            docUrl: body.result_doc_url,
+          }).catch(console.error);
+          break;
+
+        case '수정요청':
+          notifyRevisionRequested({
+            requestId: body.request_id,
+            hospitalName: body.hospital_name,
+            targetKeyword: body.target_keyword,
+            revisionRequest: body.revision_request || '',
+            revisionCount: body.revision_count,
+          }).catch(console.error);
+          break;
+
+        case '수정완료':
+          notifyRevisionCompleted({
+            requestId: body.request_id,
+            hospitalName: body.hospital_name,
+            targetKeyword: body.target_keyword,
+            revisionCount: body.revision_count,
+            docUrl: body.result_doc_url,
+          }).catch(console.error);
+          break;
+
+        case '에러':
+          const lastMessage = body.chat_history[body.chat_history.length - 1];
+          notifyError({
+            requestId: body.request_id,
+            hospitalName: body.hospital_name,
+            errorMessage: lastMessage?.content || '알 수 없는 오류',
+          }).catch(console.error);
+          break;
+      }
+
       return NextResponse.json({ success: true, source: 'sheets' });
     }
 
