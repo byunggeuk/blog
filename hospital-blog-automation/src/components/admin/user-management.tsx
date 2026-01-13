@@ -240,15 +240,15 @@ export function UserManagement() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <Table>
+            <Table className="table-fixed w-full">
               <TableHeader>
-                <TableRow>
-                  <TableHead>이름</TableHead>
-                  <TableHead>이메일</TableHead>
-                  <TableHead className="w-[100px]">역할</TableHead>
-                  <TableHead className="w-[120px]">상태</TableHead>
-                  <TableHead className="w-[140px]">가입일</TableHead>
-                  <TableHead className="w-[120px] text-right">작업</TableHead>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="w-[120px] font-semibold">이름</TableHead>
+                  <TableHead className="font-semibold">이메일</TableHead>
+                  <TableHead className="w-[80px] font-semibold text-center">역할</TableHead>
+                  <TableHead className="w-[100px] font-semibold text-center">상태</TableHead>
+                  <TableHead className="w-[100px] font-semibold text-center">가입일</TableHead>
+                  <TableHead className="w-[80px] font-semibold text-center">작업</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -262,7 +262,7 @@ export function UserManagement() {
                   </TableRow>
                 ) : (
                   filteredUsers.map((user) => (
-                    <TableRow key={user.id}>
+                    <TableRow key={user.id} className="hover:bg-muted/30">
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           {user.name}
@@ -272,7 +272,7 @@ export function UserManagement() {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
                         {user.role === 'admin' ? (
                           <Badge variant="secondary" className="gap-1">
                             <Shield className="h-3 w-3" />
@@ -282,18 +282,18 @@ export function UserManagement() {
                           <span className="text-sm text-muted-foreground">일반</span>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
                         <Badge variant={statusConfig[user.status].variant} className="gap-1">
                           {statusConfig[user.status].icon}
                           {statusConfig[user.status].label}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
+                      <TableCell className="text-muted-foreground text-sm text-center">
                         {format(new Date(user.created_at), 'yyyy-MM-dd', { locale: ko })}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-center">
                         {user.id !== currentUser?.id && user.role !== 'admin' && (
-                          <div className="flex justify-end gap-1">
+                          <div className="flex justify-center gap-1">
                             {user.status === 'pending' && (
                               <Button
                                 size="sm"
