@@ -10,9 +10,10 @@ import { Loader2 } from 'lucide-react';
 
 function AppContent() {
   const { data: session, status } = useSession();
-  const { user, authStatus } = useApp();
+  const { user, authStatus, isLoading } = useApp();
 
-  if (status === 'loading') {
+  // 세션 로딩 중이거나 사용자 데이터 로딩 중
+  if (status === 'loading' || (session && authStatus === 'unauthenticated')) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

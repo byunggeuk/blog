@@ -60,6 +60,43 @@ export async function GET() {
   }
 }
 
+// 사용자 시트 존재 확인 및 생성
+async function ensureUserSheet(sheets: any, spreadsheetId: string) {
+  try {
+    const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
+    const existingSheets = spreadsheet.data.sheets?.map((s: any) => s.properties?.title) || [];
+
+    if (!existingSheets.includes('사용자')) {
+      // 시트 생성
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: {
+          requests: [{
+            addSheet: {
+              properties: {
+                title: '사용자',
+                gridProperties: { rowCount: 100, columnCount: 8 },
+              },
+            },
+          }],
+        },
+      });
+
+      // 헤더 추가
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: '사용자!A1:H1',
+        valueInputOption: 'RAW',
+        requestBody: {
+          values: [['id', 'email', 'name', 'role', 'status', 'created_at', 'approved_at', 'blocked_at']],
+        },
+      });
+    }
+  } catch (error) {
+    console.error('시트 확인/생성 오류:', error);
+  }
+}
+
 // POST: 새 사용자 추가 (첫 로그인 시)
 export async function POST(request: NextRequest) {
   try {
@@ -78,11 +115,19 @@ export async function POST(request: NextRequest) {
     const sheets = google.sheets({ version: 'v4', auth });
     const spreadsheetId = getUsersSpreadsheetId();
 
+    // 사용자 시트 존재 확인 및 생성
+    await ensureUserSheet(sheets, spreadsheetId);
+
     // 기존 사용자 확인
-    const existingResponse = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: '사용자!A2:H100',
-    });
+    let existingResponse;
+    try {
+      existingResponse = await sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: '사용자!A2:H100',
+      });
+    } catch {
+      existingResponse = { data: { values: [] } };
+    }
 
     const rows = existingResponse.data.values || [];
     const existingUser = rows.find((row) => row[1] === email);
