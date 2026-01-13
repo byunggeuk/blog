@@ -63,9 +63,9 @@ export async function POST() {
         return correctHeader;
       }
 
-      // 데이터 행 재정렬
-      // 0-9번 인덱스는 동일하게 유지
-      // 10-15번 인덱스는 재매핑
+      // 데이터 행 재정렬 - 이전 마이그레이션 되돌리기
+      // 현재 상태: 10=doc_id가 있어야할 곳에 revision_count가 있음
+      // 되돌리기: 현재 잘못된 위치에서 원래 위치로
       return [
         row[0] || '',   // 0: request_id
         row[1] || '',   // 1: created_at
@@ -77,12 +77,12 @@ export async function POST() {
         row[7] || '',   // 7: format_type
         row[8] || '',   // 8: format_custom
         row[9] || '',   // 9: status
-        row[12] || '',  // 10: result_doc_id (이전 12번에서)
-        row[13] || '',  // 11: result_doc_url (이전 13번에서)
-        row[10] || '',  // 12: revision_count (이전 10번에서)
-        row[14] || '',  // 13: completed_at (이전 14번에서)
-        row[15] || '',  // 14: chat_history (이전 15번에서)
-        row[11] || '',  // 15: created_by (이전 11번에서)
+        row[12] || '',  // 10: result_doc_id ← 현재 12번(revision_count 위치)에서 가져옴
+        row[15] || '',  // 11: result_doc_url ← 현재 15번(created_by 위치)에서 가져옴
+        row[10] || '',  // 12: revision_count ← 현재 10번에서 가져옴
+        row[11] || '',  // 13: completed_at ← 현재 11번에서 가져옴
+        row[13] || '',  // 14: chat_history ← 현재 13번에서 가져옴
+        row[14] || '',  // 15: created_by ← 현재 14번에서 가져옴
       ];
     });
 
