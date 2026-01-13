@@ -146,6 +146,18 @@ export function UserManagement() {
 
   return (
     <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">사용자 관리</h1>
+          <p className="text-muted-foreground">팀원들의 접근 권한을 관리합니다.</p>
+        </div>
+        <Badge variant="outline" className="hidden sm:flex gap-1">
+          <Shield className="h-3 w-3" />
+          관리자 전용
+        </Badge>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
@@ -213,11 +225,18 @@ export function UserManagement() {
 
       {/* User Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>사용자 목록</CardTitle>
-          <CardDescription>
-            회원가입 신청을 승인하거나 퇴사자의 접근 권한을 차단할 수 있습니다.
-          </CardDescription>
+        <CardHeader className="border-b bg-muted/30">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <Users className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">사용자 목록</CardTitle>
+              <CardDescription className="text-sm">
+                회원가입 신청을 승인하거나 퇴사자의 접근 권한을 차단할 수 있습니다.
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
