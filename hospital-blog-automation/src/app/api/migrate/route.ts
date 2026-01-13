@@ -39,10 +39,6 @@ export async function POST() {
       return NextResponse.json({ message: '데이터가 없습니다.', migrated: 0 });
     }
 
-    // 현재 헤더 확인
-    const currentHeader = rows[0];
-    console.log('현재 헤더:', currentHeader);
-
     // 올바른 헤더 순서
     const correctHeader = [
       'request_id', 'created_at', 'hospital_id', 'hospital_name',
@@ -51,15 +47,16 @@ export async function POST() {
       'revision_count', 'completed_at', 'chat_history', 'created_by'
     ];
 
-    // 현재 헤더에서 각 컬럼의 인덱스 찾기
-    const columnMap: { [key: string]: number } = {};
-    currentHeader.forEach((col: string, index: number) => {
-      columnMap[col] = index;
-    });
+    // 이전 잘못된 순서 (setup API의 원래 순서)
+    // 0-9는 동일: request_id, created_at, hospital_id, hospital_name, target_keyword, topic_keyword, purpose, format_type, format_custom, status
+    // 10: revision_count (잘못됨, result_doc_id여야 함)
+    // 11: created_by (잘못됨, result_doc_url이어야 함)
+    // 12: result_doc_id (잘못됨, revision_count여야 함)
+    // 13: result_doc_url (잘못됨, completed_at이어야 함)
+    // 14: completed_at (잘못됨, chat_history여야 함)
+    // 15: chat_history (잘못됨, created_by여야 함)
 
-    console.log('컬럼 매핑:', columnMap);
-
-    // 데이터 재정렬
+    // 데이터 재정렬 (하드코딩으로 강제 매핑)
     const migratedRows = rows.map((row, rowIndex) => {
       if (rowIndex === 0) {
         // 헤더 행
@@ -67,13 +64,26 @@ export async function POST() {
       }
 
       // 데이터 행 재정렬
-      return correctHeader.map((colName) => {
-        const oldIndex = columnMap[colName];
-        if (oldIndex !== undefined && row[oldIndex] !== undefined) {
-          return row[oldIndex];
-        }
-        return '';
-      });
+      // 0-9번 인덱스는 동일하게 유지
+      // 10-15번 인덱스는 재매핑
+      return [
+        row[0] || '',   // 0: request_id
+        row[1] || '',   // 1: created_at
+        row[2] || '',   // 2: hospital_id
+        row[3] || '',   // 3: hospital_name
+        row[4] || '',   // 4: target_keyword
+        row[5] || '',   // 5: topic_keyword
+        row[6] || '',   // 6: purpose
+        row[7] || '',   // 7: format_type
+        row[8] || '',   // 8: format_custom
+        row[9] || '',   // 9: status
+        row[12] || '',  // 10: result_doc_id (이전 12번에서)
+        row[13] || '',  // 11: result_doc_url (이전 13번에서)
+        row[10] || '',  // 12: revision_count (이전 10번에서)
+        row[14] || '',  // 13: completed_at (이전 14번에서)
+        row[15] || '',  // 14: chat_history (이전 15번에서)
+        row[11] || '',  // 15: created_by (이전 11번에서)
+      ];
     });
 
     // 2. 시트 데이터 업데이트
