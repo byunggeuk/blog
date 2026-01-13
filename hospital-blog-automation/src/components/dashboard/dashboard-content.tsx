@@ -229,11 +229,13 @@ export function DashboardContent() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">전체 병원</SelectItem>
-              {hospitals.map((hospital) => (
-                <SelectItem key={hospital.hospital_id} value={hospital.hospital_id}>
-                  {hospital.hospital_name}
-                </SelectItem>
-              ))}
+              {hospitals
+                .filter((hospital) => hospital.hospital_id)
+                .map((hospital) => (
+                  <SelectItem key={hospital.hospital_id} value={hospital.hospital_id}>
+                    {hospital.hospital_name}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
 

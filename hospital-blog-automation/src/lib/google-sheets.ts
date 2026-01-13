@@ -43,17 +43,19 @@ export async function getHospitals(): Promise<Hospital[]> {
 
   const rows = response.data.values || [];
 
-  return rows.map((row) => ({
-    hospital_id: row[0] || '',
-    hospital_name: row[1] || '',
-    blog_url: row[2] || '',
-    reference_folder_id: row[3] || '',
-    output_folder_id: row[4] || '',
-    prompt_name: row[5] || '',
-    system_prompt: row[6] || '',
-    created_at: row[7] || new Date().toISOString(),
-    is_active: row[8] === 'TRUE' || row[8] === 'true' || row[8] === '1',
-  }));
+  return rows
+    .filter((row) => row[0] && row[0].trim() !== '') // 빈 hospital_id 필터링
+    .map((row) => ({
+      hospital_id: row[0] || '',
+      hospital_name: row[1] || '',
+      blog_url: row[2] || '',
+      reference_folder_id: row[3] || '',
+      output_folder_id: row[4] || '',
+      prompt_name: row[5] || '',
+      system_prompt: row[6] || '',
+      created_at: row[7] || new Date().toISOString(),
+      is_active: row[8] === 'TRUE' || row[8] === 'true' || row[8] === '1',
+    }));
 }
 
 // 병원 추가
