@@ -238,8 +238,8 @@ export function UserManagement() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
+        <CardContent className="p-4">
+          <div className="overflow-x-auto rounded-lg border">
             <Table className="table-fixed w-full">
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
