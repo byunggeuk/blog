@@ -76,21 +76,28 @@ export function EmployeeStatistics() {
       stats.completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
     });
 
-    // 총 요청 수 기준 내림차순 정렬
-    return Array.from(statsMap.values()).sort((a, b) => b.total - a.total);
+    // 빈 이메일 제외하고 총 요청 수 기준 내림차순 정렬
+    return Array.from(statsMap.values())
+      .filter((s) => s.email && s.email.trim() !== '')
+      .sort((a, b) => b.total - a.total);
   }, [requests, users]);
 
   // 전체 통계
   const totalStats = useMemo(() => {
+    // 실제 등록된 사용자 수 (승인된 사용자만)
+    const registeredUsers = users.filter((u) => u.status === 'approved').length;
+
     return {
       totalRequests: requests.length,
       totalCompleted: requests.filter((r) => r.status === '완료' || r.status === '수정완료').length,
       totalPending: requests.filter((r) => r.status === '대기').length,
       totalInProgress: requests.filter((r) => r.status === '생성중' || r.status === '수정요청').length,
       totalError: requests.filter((r) => r.status === '에러').length,
+      registeredUsers,
+      // employeeStats는 이미 빈 이메일이 필터링됨
       activeEmployees: employeeStats.length,
     };
-  }, [requests, employeeStats]);
+  }, [requests, employeeStats, users]);
 
   return (
     <div className="space-y-6">
@@ -104,7 +111,7 @@ export function EmployeeStatistics() {
           <CardContent>
             <div className="text-2xl font-bold">{totalStats.totalRequests}</div>
             <p className="text-xs text-muted-foreground">
-              {totalStats.activeEmployees}명의 직원
+              등록 직원 {totalStats.registeredUsers}명 (활동 {totalStats.activeEmployees}명)
             </p>
           </CardContent>
         </Card>
