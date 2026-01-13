@@ -9,9 +9,9 @@ function getAuthClient() {
   });
 }
 
-// 사용자 관리용 별도 스프레드시트 (관리자만 접근)
+// 사용자 관리용 별도 스프레드시트 (관리자만 접근, 필수)
 function getUsersSpreadsheetId() {
-  return process.env.GOOGLE_USERS_SPREADSHEET_ID || process.env.GOOGLE_SPREADSHEET_ID || '';
+  return process.env.GOOGLE_USERS_SPREADSHEET_ID || '';
 }
 
 interface SheetUser {
@@ -28,8 +28,12 @@ interface SheetUser {
 // GET: 모든 사용자 가져오기
 export async function GET() {
   try {
-    if (!process.env.GOOGLE_SERVICE_ACCOUNT_KEY || !getUsersSpreadsheetId()) {
-      return NextResponse.json({ users: [], source: 'mock' });
+    if (!process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
+      return NextResponse.json({ users: [], source: 'mock', error: 'Service account not configured' });
+    }
+
+    if (!process.env.GOOGLE_USERS_SPREADSHEET_ID) {
+      return NextResponse.json({ users: [], source: 'mock', error: 'GOOGLE_USERS_SPREADSHEET_ID 환경변수를 설정해주세요.' });
     }
 
     const auth = getAuthClient();
@@ -107,15 +111,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '이메일이 필요합니다.' }, { status: 400 });
     }
 
-    if (!process.env.GOOGLE_SERVICE_ACCOUNT_KEY || !getUsersSpreadsheetId()) {
-      return NextResponse.json({ error: 'Google Sheets 설정이 필요합니다.' }, { status: 500 });
+    if (!process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
+      return NextResponse.json({ error: 'Service account not configured' }, { status: 500 });
+    }
+
+    if (!process.env.GOOGLE_USERS_SPREADSHEET_ID) {
+      return NextResponse.json({ error: 'GOOGLE_USERS_SPREADSHEET_ID 환경변수를 설정해주세요.' }, { status: 500 });
     }
 
     const auth = getAuthClient();
     const sheets = google.sheets({ version: 'v4', auth });
     const spreadsheetId = getUsersSpreadsheetId();
 
-    // 사용자 시트 존재 확인 및 생성
+    // 사용자 시트 존재 확인 및 생성 (별도 스프레드시트에)
     await ensureUserSheet(sheets, spreadsheetId);
 
     // 기존 사용자 확인
@@ -207,8 +215,12 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'userId와 action이 필요합니다.' }, { status: 400 });
     }
 
-    if (!process.env.GOOGLE_SERVICE_ACCOUNT_KEY || !getUsersSpreadsheetId()) {
-      return NextResponse.json({ error: 'Google Sheets 설정이 필요합니다.' }, { status: 500 });
+    if (!process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
+      return NextResponse.json({ error: 'Service account not configured' }, { status: 500 });
+    }
+
+    if (!process.env.GOOGLE_USERS_SPREADSHEET_ID) {
+      return NextResponse.json({ error: 'GOOGLE_USERS_SPREADSHEET_ID 환경변수를 설정해주세요.' }, { status: 500 });
     }
 
     const auth = getAuthClient();

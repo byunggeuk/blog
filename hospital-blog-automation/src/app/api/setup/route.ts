@@ -13,9 +13,13 @@ function getSpreadsheetId() {
   return process.env.GOOGLE_SPREADSHEET_ID || '';
 }
 
-// 사용자 관리용 별도 스프레드시트
+// 사용자 관리용 별도 스프레드시트 (필수)
 function getUsersSpreadsheetId() {
   return process.env.GOOGLE_USERS_SPREADSHEET_ID || '';
+}
+
+function isUsersSpreadsheetConfigured() {
+  return !!process.env.GOOGLE_USERS_SPREADSHEET_ID;
 }
 
 export async function POST() {
@@ -227,9 +231,11 @@ export async function POST() {
 
     return NextResponse.json({
       success: true,
-      message: '시트 구조가 성공적으로 생성되었습니다.',
+      message: isUsersSpreadsheetConfigured()
+        ? '시트 구조가 성공적으로 생성되었습니다.'
+        : '메인 시트가 생성되었습니다. GOOGLE_USERS_SPREADSHEET_ID 환경변수를 설정해주세요.',
       mainSheets: ['병원설정', '요청목록'],
-      usersSheet: usersSpreadsheetId ? '사용자 (별도 스프레드시트)' : '미설정',
+      usersSheet: isUsersSpreadsheetConfigured() ? '사용자 (별도 스프레드시트에 생성됨)' : '미설정 - GOOGLE_USERS_SPREADSHEET_ID 필요',
     });
   } catch (error) {
     console.error('Setup API Error:', error);
