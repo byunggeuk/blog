@@ -194,6 +194,69 @@ export async function POST() {
       });
     }
 
+    // 요청목록 시트에 드롭다운 추가
+    if (requestSheetId !== undefined) {
+      const formatTypes = [
+        'Q&A형', '사례/스토리텔링형', '실패분석형', '치료과정 시뮬레이션형',
+        '비교분석형', '팩트체크형', '칼럼형', '기타'
+      ];
+
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: {
+          requests: [
+            // format_type 드롭다운 (H열)
+            {
+              setDataValidation: {
+                range: {
+                  sheetId: requestSheetId,
+                  startRowIndex: 1,
+                  endRowIndex: 1000,
+                  startColumnIndex: 7,
+                  endColumnIndex: 8,
+                },
+                rule: {
+                  condition: {
+                    type: 'ONE_OF_LIST',
+                    values: formatTypes.map(t => ({ userEnteredValue: t })),
+                  },
+                  showCustomUi: true,
+                  strict: false,
+                },
+              },
+            },
+            // status 드롭다운 (J열)
+            {
+              setDataValidation: {
+                range: {
+                  sheetId: requestSheetId,
+                  startRowIndex: 1,
+                  endRowIndex: 1000,
+                  startColumnIndex: 9,
+                  endColumnIndex: 10,
+                },
+                rule: {
+                  condition: {
+                    type: 'ONE_OF_LIST',
+                    values: [
+                      { userEnteredValue: '대기' },
+                      { userEnteredValue: '생성중' },
+                      { userEnteredValue: '완료' },
+                      { userEnteredValue: '수정요청' },
+                      { userEnteredValue: '수정완료' },
+                      { userEnteredValue: '에러' },
+                    ],
+                  },
+                  showCustomUi: true,
+                  strict: true,
+                },
+              },
+            },
+          ],
+        },
+      });
+    }
+
     // 사용자 시트 스타일링 (별도 스프레드시트)
     if (usersSpreadsheetId) {
       const usersSheetInfo = await sheets.spreadsheets.get({ spreadsheetId: usersSpreadsheetId });
