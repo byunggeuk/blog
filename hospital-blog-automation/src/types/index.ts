@@ -2,12 +2,13 @@
 export interface Hospital {
   hospital_id: string;
   hospital_name: string;
-  system_prompt: string;
-  reference_folder_id: string;
-  output_folder_id: string;
-  slack_channel: string;
+  blog_url?: string;
+  reference_folder_id?: string;
+  output_folder_id?: string;
+  prompt_name?: string; // 시트에 표시할 짧은 프롬프트 이름
+  system_prompt: string; // 전체 시스템 프롬프트
   created_at: string;
-  updated_at: string;
+  is_active: boolean;
 }
 
 // 요청 상태 타입

@@ -29,6 +29,7 @@ function getSpreadsheetId() {
 }
 
 // ============ 병원 데이터 ============
+// 시트 컬럼 순서: hospital_id, hospital_name, blog_url, reference_folder_id, output_folder_id, prompt_name, system_prompt, created_at, is_active
 
 export async function getHospitals(): Promise<Hospital[]> {
   const auth = getAuthClient();
@@ -37,7 +38,7 @@ export async function getHospitals(): Promise<Hospital[]> {
 
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: '병원설정!A2:H100', // 헤더 제외
+    range: '병원설정!A2:I100', // 헤더 제외
   });
 
   const rows = response.data.values || [];
@@ -45,13 +46,116 @@ export async function getHospitals(): Promise<Hospital[]> {
   return rows.map((row) => ({
     hospital_id: row[0] || '',
     hospital_name: row[1] || '',
-    system_prompt: row[2] || '',
+    blog_url: row[2] || '',
     reference_folder_id: row[3] || '',
     output_folder_id: row[4] || '',
-    slack_channel: row[5] || '',
-    created_at: row[6] || new Date().toISOString(),
-    updated_at: row[7] || new Date().toISOString(),
+    prompt_name: row[5] || '',
+    system_prompt: row[6] || '',
+    created_at: row[7] || new Date().toISOString(),
+    is_active: row[8] === 'TRUE' || row[8] === 'true' || row[8] === '1',
   }));
+}
+
+// 병원 추가
+export async function addHospital(hospital: Hospital): Promise<void> {
+  const auth = getAuthClient();
+  const sheets = google.sheets({ version: 'v4', auth });
+  const spreadsheetId = getSpreadsheetId();
+
+  const row = [
+    hospital.hospital_id,
+    hospital.hospital_name,
+    hospital.blog_url || '',
+    hospital.reference_folder_id || '',
+    hospital.output_folder_id || '',
+    hospital.prompt_name || '',
+    hospital.system_prompt,
+    hospital.created_at,
+    hospital.is_active ? 'TRUE' : 'FALSE',
+  ];
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId,
+    range: '병원설정!A:I',
+    valueInputOption: 'USER_ENTERED',
+    requestBody: {
+      values: [row],
+    },
+  });
+}
+
+// 병원 업데이트
+export async function updateHospital(hospital: Hospital): Promise<void> {
+  const auth = getAuthClient();
+  const sheets = google.sheets({ version: 'v4', auth });
+  const spreadsheetId = getSpreadsheetId();
+
+  // 해당 hospital_id의 행 번호 찾기
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: '병원설정!A:A',
+  });
+
+  const rows = response.data.values || [];
+  const rowIndex = rows.findIndex((row) => row[0] === hospital.hospital_id);
+
+  if (rowIndex === -1) {
+    throw new Error(`병원을 찾을 수 없습니다: ${hospital.hospital_id}`);
+  }
+
+  const rowNumber = rowIndex + 1;
+
+  const row = [
+    hospital.hospital_id,
+    hospital.hospital_name,
+    hospital.blog_url || '',
+    hospital.reference_folder_id || '',
+    hospital.output_folder_id || '',
+    hospital.prompt_name || '',
+    hospital.system_prompt,
+    hospital.created_at,
+    hospital.is_active ? 'TRUE' : 'FALSE',
+  ];
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `병원설정!A${rowNumber}:I${rowNumber}`,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: {
+      values: [row],
+    },
+  });
+}
+
+// 병원 삭제 (실제로는 is_active를 FALSE로)
+export async function deleteHospital(hospitalId: string): Promise<void> {
+  const auth = getAuthClient();
+  const sheets = google.sheets({ version: 'v4', auth });
+  const spreadsheetId = getSpreadsheetId();
+
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: '병원설정!A:I',
+  });
+
+  const rows = response.data.values || [];
+  const rowIndex = rows.findIndex((row) => row[0] === hospitalId);
+
+  if (rowIndex === -1) {
+    throw new Error(`병원을 찾을 수 없습니다: ${hospitalId}`);
+  }
+
+  const rowNumber = rowIndex + 1;
+
+  // is_active를 FALSE로 설정
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `병원설정!I${rowNumber}`,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: {
+      values: [['FALSE']],
+    },
+  });
 }
 
 // ============ 요청 데이터 ============

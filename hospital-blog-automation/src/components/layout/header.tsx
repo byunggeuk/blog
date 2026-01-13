@@ -14,8 +14,8 @@ import {
 import { Building2, LogOut, Settings, Users, FileText, Shield } from 'lucide-react';
 
 interface HeaderProps {
-  currentTab?: 'dashboard' | 'users';
-  onTabChange?: (tab: 'dashboard' | 'users') => void;
+  currentTab?: 'dashboard' | 'hospitals' | 'users';
+  onTabChange?: (tab: 'dashboard' | 'hospitals' | 'users') => void;
 }
 
 export function Header({ currentTab = 'dashboard', onTabChange }: HeaderProps) {
@@ -44,6 +44,15 @@ export function Header({ currentTab = 'dashboard', onTabChange }: HeaderProps) {
               >
                 <FileText className="h-4 w-4" />
                 <span className="hidden sm:inline">대시보드</span>
+              </Button>
+              <Button
+                variant={currentTab === 'hospitals' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => onTabChange('hospitals')}
+                className="gap-2"
+              >
+                <Building2 className="h-4 w-4" />
+                <span className="hidden sm:inline">병원 관리</span>
               </Button>
               <Button
                 variant={currentTab === 'users' ? 'secondary' : 'ghost'}

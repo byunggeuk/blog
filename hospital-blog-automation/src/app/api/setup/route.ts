@@ -98,12 +98,12 @@ export async function POST() {
 
     // 병원설정 헤더 추가
     const hospitalHeaders = [
-      ['hospital_id', 'hospital_name', 'blog_url', 'reference_folder_id', 'output_folder_id', 'system_prompt', 'created_at', 'is_active'],
+      ['hospital_id', 'hospital_name', 'blog_url', 'reference_folder_id', 'output_folder_id', 'prompt_name', 'system_prompt', 'created_at', 'is_active'],
     ];
 
     await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: '병원설정!A1:H1',
+      range: '병원설정!A1:I1',
       valueInputOption: 'RAW',
       requestBody: { values: hospitalHeaders },
     });
