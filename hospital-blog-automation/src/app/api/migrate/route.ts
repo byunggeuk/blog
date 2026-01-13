@@ -63,9 +63,15 @@ export async function POST() {
         return correctHeader;
       }
 
-      // 데이터 행 재정렬 - 이전 마이그레이션 되돌리기
-      // 현재 상태: 10=doc_id가 있어야할 곳에 revision_count가 있음
-      // 되돌리기: 현재 잘못된 위치에서 원래 위치로
+      // 현재 시트 상태 분석 결과:
+      // [10] result_doc_id 위치에 → "1" (revision_count 값)
+      // [11] result_doc_url 위치에 → 날짜 (completed_at 값)
+      // [12] revision_count 위치에 → doc_id
+      // [13] completed_at 위치에 → chat_history JSON
+      // [14] chat_history 위치에 → 빈 값
+      // [15] created_by 위치에 → doc_url
+
+      // 올바른 재매핑:
       return [
         row[0] || '',   // 0: request_id
         row[1] || '',   // 1: created_at
@@ -77,12 +83,12 @@ export async function POST() {
         row[7] || '',   // 7: format_type
         row[8] || '',   // 8: format_custom
         row[9] || '',   // 9: status
-        row[12] || '',  // 10: result_doc_id ← 현재 12번(revision_count 위치)에서 가져옴
-        row[15] || '',  // 11: result_doc_url ← 현재 15번(created_by 위치)에서 가져옴
-        row[10] || '',  // 12: revision_count ← 현재 10번에서 가져옴
-        row[11] || '',  // 13: completed_at ← 현재 11번에서 가져옴
-        row[13] || '',  // 14: chat_history ← 현재 13번에서 가져옴
-        row[14] || '',  // 15: created_by ← 현재 14번에서 가져옴
+        row[12] || '',  // 10: result_doc_id ← 현재 [12]에 있는 doc_id
+        row[15] || '',  // 11: result_doc_url ← 현재 [15]에 있는 doc_url
+        row[10] || '',  // 12: revision_count ← 현재 [10]에 있는 "1"
+        row[11] || '',  // 13: completed_at ← 현재 [11]에 있는 날짜
+        row[13] || '',  // 14: chat_history ← 현재 [13]에 있는 JSON
+        '',             // 15: created_by ← 기존 데이터에 없음 (빈 값으로)
       ];
     });
 
