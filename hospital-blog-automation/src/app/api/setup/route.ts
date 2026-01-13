@@ -109,9 +109,8 @@ export async function POST() {
     });
 
     // 요청목록 헤더 추가 (google-sheets.ts와 순서 일치)
-    // created_by를 status 다음에 배치하여 구글 시트에서 보기 쉽게 함
     const requestHeaders = [
-      ['request_id', 'created_at', 'hospital_id', 'hospital_name', 'target_keyword', 'topic_keyword', 'purpose', 'format_type', 'format_custom', 'status', 'created_by', 'result_doc_id', 'result_doc_url', 'revision_count', 'completed_at', 'chat_history'],
+      ['request_id', 'created_at', 'hospital_id', 'hospital_name', 'target_keyword', 'topic_keyword', 'purpose', 'format_type', 'format_custom', 'status', 'result_doc_id', 'result_doc_url', 'revision_count', 'completed_at', 'chat_history', 'created_by'],
     ];
 
     await sheets.spreadsheets.values.update({

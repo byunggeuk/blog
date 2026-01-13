@@ -190,15 +190,15 @@ export async function POST() {
       return NextResponse.json({ message: '데이터가 없습니다.', migrated: 0 });
     }
 
-    // 새로운 헤더 순서 (created_by를 status 다음에 배치)
+    // 올바른 헤더 순서 (현재 시트와 일치)
     const correctHeader = [
       'request_id', 'created_at', 'hospital_id', 'hospital_name',
       'target_keyword', 'topic_keyword', 'purpose', 'format_type',
-      'format_custom', 'status', 'created_by', 'result_doc_id', 'result_doc_url',
-      'revision_count', 'completed_at', 'chat_history'
+      'format_custom', 'status', 'result_doc_id', 'result_doc_url',
+      'revision_count', 'completed_at', 'chat_history', 'created_by'
     ];
 
-    // 이전 순서 (마이그레이션 전):
+    // 컬럼 순서:
     // 0-9: request_id, created_at, hospital_id, hospital_name, target_keyword, topic_keyword, purpose, format_type, format_custom, status
     // 10: result_doc_id
     // 11: result_doc_url
@@ -207,39 +207,16 @@ export async function POST() {
     // 14: chat_history
     // 15: created_by
 
-    // 새로운 순서:
-    // 0-9: 동일
-    // 10: created_by (이전 15)
-    // 11: result_doc_id (이전 10)
-    // 12: result_doc_url (이전 11)
-    // 13: revision_count (이전 12)
-    // 14: completed_at (이전 13)
-    // 15: chat_history (이전 14)
-
-    // 데이터 재정렬
+    // 데이터 정리 (헤더만 교체하고 데이터는 그대로)
     const migratedRows = rows.map((row, rowIndex) => {
       if (rowIndex === 0) {
         return correctHeader;
       }
 
-      return [
-        row[0] || '',   // 0: request_id
-        row[1] || '',   // 1: created_at
-        row[2] || '',   // 2: hospital_id
-        row[3] || '',   // 3: hospital_name
-        row[4] || '',   // 4: target_keyword
-        row[5] || '',   // 5: topic_keyword
-        row[6] || '',   // 6: purpose
-        row[7] || '',   // 7: format_type
-        row[8] || '',   // 8: format_custom
-        row[9] || '',   // 9: status
-        row[15] || '',  // 10: created_by ← 이전 인덱스 15
-        row[10] || '',  // 11: result_doc_id ← 이전 인덱스 10
-        row[11] || '',  // 12: result_doc_url ← 이전 인덱스 11
-        row[12] || '',  // 13: revision_count ← 이전 인덱스 12
-        row[13] || '',  // 14: completed_at ← 이전 인덱스 13
-        row[14] || '',  // 15: chat_history ← 이전 인덱스 14
-      ];
+      // 데이터 행은 그대로 유지 (컬럼 수만 맞춤)
+      const newRow = [...row];
+      while (newRow.length < 16) newRow.push('');
+      return newRow;
     });
 
     // 2. 시트 데이터 업데이트

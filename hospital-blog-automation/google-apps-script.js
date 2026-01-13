@@ -14,8 +14,8 @@
  * 5. 저장 (Ctrl+S)
  * 6. 트리거 설정 (메뉴에서 '트리거 설정 안내' 클릭)
  *
- * 컬럼 순서 (2026년 1월 기준):
- * K열(11)이 created_by 컬럼입니다.
+ * 컬럼 순서 (현재 시트):
+ * P열(16)이 created_by 컬럼입니다.
  */
 
 // ⚠️ 여기에 Vercel 배포 URL 입력
@@ -29,11 +29,11 @@ const VERCEL_URL = 'https://your-app.vercel.app';
  * 1. created_by 필드 자동 채우기 (현재 접속한 사용자 이메일)
  * 2. 상태가 '대기'인 경우 처리 API 호출
  *
- * 컬럼 순서 (2026년 1월 업데이트):
+ * 컬럼 순서:
  * A(1): request_id, B(2): created_at, C(3): hospital_id, D(4): hospital_name,
  * E(5): target_keyword, F(6): topic_keyword, G(7): purpose, H(8): format_type,
- * I(9): format_custom, J(10): status, K(11): created_by, L(12): result_doc_id,
- * M(13): result_doc_url, N(14): revision_count, O(15): completed_at, P(16): chat_history
+ * I(9): format_custom, J(10): status, K(11): result_doc_id, L(12): result_doc_url,
+ * M(13): revision_count, N(14): completed_at, O(15): chat_history, P(16): created_by
  */
 function onEdit(e) {
   const sheet = e.source.getActiveSheet();
@@ -48,7 +48,7 @@ function onEdit(e) {
   // 헤더 행은 무시
   if (row === 1) return;
 
-  // created_by 자동 채우기 (K열, 인덱스 11)
+  // created_by 자동 채우기 (P열, 인덱스 16)
   // 새로운 데이터가 입력되고 created_by가 비어있는 경우
   autoFillCreatedBy(sheet, row);
 
@@ -75,7 +75,7 @@ function onEdit(e) {
  * @param {number} row - 편집된 행 번호
  */
 function autoFillCreatedBy(sheet, row) {
-  const createdByCell = sheet.getRange(row, 11); // K열 (created_by)
+  const createdByCell = sheet.getRange(row, 16); // P열 (created_by)
   const currentValue = createdByCell.getValue();
 
   // 이미 값이 있으면 건드리지 않음
@@ -163,12 +163,12 @@ function fillEmptyCreatedBy() {
   let filledCount = 0;
 
   for (let row = 2; row <= lastRow; row++) {
-    const createdBy = sheet.getRange(row, 11).getValue(); // K열
+    const createdBy = sheet.getRange(row, 16).getValue(); // P열
     const hospitalName = sheet.getRange(row, 4).getValue(); // D열
 
     // 데이터가 있고 created_by가 비어있는 경우에만
     if (hospitalName && (!createdBy || createdBy.toString().trim() === '')) {
-      sheet.getRange(row, 11).setValue(userEmail);
+      sheet.getRange(row, 16).setValue(userEmail);
       filledCount++;
     }
   }
