@@ -5,8 +5,9 @@ import { Header } from '@/components/layout/header';
 import { DashboardContent } from '@/components/dashboard/dashboard-content';
 import { UserManagement } from '@/components/admin/user-management';
 import { HospitalManagement } from '@/components/admin/hospital-management';
+import { EmployeeStatistics } from '@/components/admin/employee-statistics';
 
-type AppTab = 'dashboard' | 'hospitals' | 'users';
+type AppTab = 'dashboard' | 'hospitals' | 'users' | 'statistics';
 
 export function AdminLayout() {
   const [currentTab, setCurrentTab] = useState<AppTab>('dashboard');
@@ -18,6 +19,7 @@ export function AdminLayout() {
         {currentTab === 'dashboard' && <DashboardContent />}
         {currentTab === 'hospitals' && <HospitalManagement />}
         {currentTab === 'users' && <UserManagement />}
+        {currentTab === 'statistics' && <EmployeeStatistics />}
       </main>
     </div>
   );

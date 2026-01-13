@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useApp } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -11,17 +12,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Building2, LogOut, Settings, Users, FileText, Shield } from 'lucide-react';
+import { Building2, LogOut, Settings, Users, FileText, Shield, User, BarChart3 } from 'lucide-react';
+import { ProfileSettingsDialog } from '@/components/profile-settings-dialog';
 
 interface HeaderProps {
-  currentTab?: 'dashboard' | 'hospitals' | 'users';
-  onTabChange?: (tab: 'dashboard' | 'hospitals' | 'users') => void;
+  currentTab?: 'dashboard' | 'hospitals' | 'users' | 'statistics';
+  onTabChange?: (tab: 'dashboard' | 'hospitals' | 'users' | 'statistics') => void;
 }
 
 export function Header({ currentTab = 'dashboard', onTabChange }: HeaderProps) {
   const { user, authStatus, logout } = useApp();
   const isAuthenticated = authStatus === 'authenticated';
   const isAdmin = user?.role === 'admin';
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -63,6 +66,15 @@ export function Header({ currentTab = 'dashboard', onTabChange }: HeaderProps) {
                 <Users className="h-4 w-4" />
                 <span className="hidden sm:inline">사용자 관리</span>
               </Button>
+              <Button
+                variant={currentTab === 'statistics' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => onTabChange('statistics')}
+                className="gap-2"
+              >
+                <BarChart3 className="h-4 w-4" />
+                <span className="hidden sm:inline">통계</span>
+              </Button>
             </nav>
           )}
         </div>
@@ -98,15 +110,19 @@ export function Header({ currentTab = 'dashboard', onTabChange }: HeaderProps) {
                 </div>
               </div>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => setProfileDialogOpen(true)}>
+                <User className="mr-2 h-4 w-4" />
+                <span>프로필 설정</span>
+              </DropdownMenuItem>
               {isAdmin && (
                 <>
                   <DropdownMenuItem onSelect={() => window.location.href = '/setup'}>
                     <Settings className="mr-2 h-4 w-4" />
                     <span>시트 설정</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
                 </>
               )}
+              <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={logout} className="text-destructive">
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>로그아웃</span>
@@ -114,6 +130,12 @@ export function Header({ currentTab = 'dashboard', onTabChange }: HeaderProps) {
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+
+        {/* Profile Settings Dialog */}
+        <ProfileSettingsDialog
+          open={profileDialogOpen}
+          onOpenChange={setProfileDialogOpen}
+        />
       </div>
     </header>
   );

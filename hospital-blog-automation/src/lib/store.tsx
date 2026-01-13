@@ -113,13 +113,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     syncUser();
   }, [session]);
 
-  const loadInitialData = useCallback(async () => {
+  const loadInitialData = useCallback(async (userEmail?: string, isAdmin?: boolean) => {
     setState((prev) => ({ ...prev, isLoading: true }));
 
     try {
+      // 요청 목록은 사용자 정보에 따라 필터링
+      const requestsUrl = userEmail
+        ? `/api/requests?userEmail=${encodeURIComponent(userEmail)}&isAdmin=${isAdmin}`
+        : '/api/requests';
+
       const [hospitalsRes, requestsRes, usersRes] = await Promise.all([
         fetch('/api/hospitals'),
-        fetch('/api/requests'),
+        fetch(requestsUrl),
         fetch('/api/users'),
       ]);
 
@@ -141,13 +146,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // 사용자 인증 완료 후 데이터 로드 (본인 요청만 필터링)
   useEffect(() => {
-    loadInitialData();
-  }, [loadInitialData]);
+    if (state.authStatus === 'authenticated' && state.user) {
+      loadInitialData(state.user.email, state.user.role === 'admin');
+    } else if (state.authStatus === 'unauthenticated') {
+      // 미인증 상태에서도 기본 데이터 로드 (병원 목록 등)
+      loadInitialData();
+    }
+  }, [state.authStatus, state.user?.email, state.user?.role, loadInitialData]);
 
   const refreshData = useCallback(async () => {
-    await loadInitialData();
-  }, [loadInitialData]);
+    if (state.user) {
+      await loadInitialData(state.user.email, state.user.role === 'admin');
+    } else {
+      await loadInitialData();
+    }
+  }, [loadInitialData, state.user]);
 
   const logout = useCallback(() => {
     signOut({ callbackUrl: '/' });
@@ -487,7 +502,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const refreshRequests = useCallback(async () => {
     setState((prev) => ({ ...prev, isLoading: true }));
     try {
-      const response = await fetch('/api/requests');
+      // 본인 요청만 필터링 (관리자는 전체)
+      const requestsUrl = state.user
+        ? `/api/requests?userEmail=${encodeURIComponent(state.user.email)}&isAdmin=${state.user.role === 'admin'}`
+        : '/api/requests';
+
+      const response = await fetch(requestsUrl);
       const data = await response.json();
       setState((prev) => ({
         ...prev,
@@ -498,7 +518,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       console.error('요청 새로고침 실패:', error);
       setState((prev) => ({ ...prev, isLoading: false }));
     }
-  }, []);
+  }, [state.user]);
 
   const approveUser = useCallback(async (userId: string) => {
     try {

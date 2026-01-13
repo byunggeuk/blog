@@ -123,12 +123,12 @@ export async function POST() {
     // 사용자 헤더 추가 (별도 스프레드시트)
     if (usersSpreadsheetId) {
       const userHeaders = [
-        ['id', 'email', 'name', 'role', 'status', 'created_at', 'approved_at', 'blocked_at'],
+        ['id', 'email', 'name', 'role', 'status', 'slack_member_id', 'created_at', 'approved_at', 'blocked_at'],
       ];
 
       await sheets.spreadsheets.values.update({
         spreadsheetId: usersSpreadsheetId,
-        range: '사용자!A1:H1',
+        range: '사용자!A1:I1',
         valueInputOption: 'RAW',
         requestBody: { values: userHeaders },
       });

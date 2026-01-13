@@ -1,4 +1,4 @@
-// Slack Webhook 알림 유틸리티
+// Slack 알림 유틸리티 (Webhook + Bot Token DM 지원)
 
 interface SlackMessage {
   text?: string;
@@ -22,12 +22,79 @@ interface SlackAttachment {
   blocks?: SlackBlock[];
 }
 
-// 웹훅 URL 가져오기
+// 웹훅 URL 가져오기 (채널 전체 알림용)
 function getSlackWebhookUrl(): string | null {
   return process.env.SLACK_WEBHOOK_URL || null;
 }
 
-// 기본 메시지 전송
+// Bot Token 가져오기 (개인 DM용)
+function getSlackBotToken(): string | null {
+  return process.env.SLACK_BOT_TOKEN || null;
+}
+
+// 개인 DM 전송 (Bot Token 사용)
+export async function sendSlackDM(
+  slackMemberId: string,
+  message: SlackMessage
+): Promise<boolean> {
+  const botToken = getSlackBotToken();
+
+  if (!botToken) {
+    console.log('Slack bot token not configured, skipping DM');
+    return false;
+  }
+
+  if (!slackMemberId) {
+    console.log('No slack member ID provided, skipping DM');
+    return false;
+  }
+
+  try {
+    // 1. DM 채널 열기 (conversations.open)
+    const openResponse = await fetch('https://slack.com/api/conversations.open', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${botToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ users: slackMemberId }),
+    });
+
+    const openData = await openResponse.json();
+    if (!openData.ok) {
+      console.error('Failed to open DM channel:', openData.error);
+      return false;
+    }
+
+    const channelId = openData.channel.id;
+
+    // 2. 메시지 전송 (chat.postMessage)
+    const postResponse = await fetch('https://slack.com/api/chat.postMessage', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${botToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        channel: channelId,
+        ...message,
+      }),
+    });
+
+    const postData = await postResponse.json();
+    if (!postData.ok) {
+      console.error('Failed to send DM:', postData.error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Slack DM error:', error);
+    return false;
+  }
+}
+
+// 웹훅으로 채널 메시지 전송
 export async function sendSlackMessage(message: SlackMessage): Promise<boolean> {
   const webhookUrl = getSlackWebhookUrl();
 
@@ -57,7 +124,22 @@ export async function sendSlackMessage(message: SlackMessage): Promise<boolean> 
   }
 }
 
-// 새 요청 생성 알림
+// 개인 알림 전송 (DM 우선, 실패시 채널로 폴백)
+export async function sendPersonalNotification(
+  slackMemberId: string | undefined,
+  message: SlackMessage
+): Promise<boolean> {
+  // slack_member_id가 있으면 DM 시도
+  if (slackMemberId && getSlackBotToken()) {
+    const dmSent = await sendSlackDM(slackMemberId, message);
+    if (dmSent) return true;
+  }
+
+  // DM 실패 또는 slack_member_id 없으면 채널로 폴백
+  return sendSlackMessage(message);
+}
+
+// 새 요청 생성 알림 (채널 전체에 알림 - 관리자용)
 export async function notifyNewRequest(params: {
   requestId: string;
   hospitalName: string;
@@ -102,14 +184,15 @@ export async function notifyNewRequest(params: {
   });
 }
 
-// 요청 완료 알림
+// 요청 완료 알림 (개인 DM 지원)
 export async function notifyRequestCompleted(params: {
   requestId: string;
   hospitalName: string;
   targetKeyword: string;
   docUrl?: string;
+  slackMemberId?: string; // 요청자의 Slack ID (개인 DM용)
 }): Promise<boolean> {
-  const { requestId, hospitalName, targetKeyword, docUrl } = params;
+  const { requestId, hospitalName, targetKeyword, docUrl, slackMemberId } = params;
 
   const blocks: SlackBlock[] = [
     {
@@ -140,20 +223,21 @@ export async function notifyRequestCompleted(params: {
     },
   ];
 
-  return sendSlackMessage({ blocks });
+  return sendPersonalNotification(slackMemberId, { blocks });
 }
 
-// 수정 요청 알림
+// 수정 요청 알림 (개인 DM 지원)
 export async function notifyRevisionRequested(params: {
   requestId: string;
   hospitalName: string;
   targetKeyword: string;
   revisionRequest: string;
   revisionCount: number;
+  slackMemberId?: string;
 }): Promise<boolean> {
-  const { requestId, hospitalName, targetKeyword, revisionRequest, revisionCount } = params;
+  const { requestId, hospitalName, targetKeyword, revisionRequest, revisionCount, slackMemberId } = params;
 
-  return sendSlackMessage({
+  const message = {
     blocks: [
       {
         type: 'header',
@@ -183,20 +267,23 @@ export async function notifyRevisionRequested(params: {
         },
       },
     ],
-  });
+  };
+
+  return sendPersonalNotification(slackMemberId, message);
 }
 
-// 수정 완료 알림
+// 수정 완료 알림 (개인 DM 지원)
 export async function notifyRevisionCompleted(params: {
   requestId: string;
   hospitalName: string;
   targetKeyword: string;
   revisionCount: number;
   docUrl?: string;
+  slackMemberId?: string;
 }): Promise<boolean> {
-  const { requestId, hospitalName, targetKeyword, revisionCount, docUrl } = params;
+  const { requestId, hospitalName, targetKeyword, revisionCount, docUrl, slackMemberId } = params;
 
-  return sendSlackMessage({
+  const message = {
     blocks: [
       {
         type: 'header',
@@ -226,18 +313,21 @@ export async function notifyRevisionCompleted(params: {
         },
       },
     ],
-  });
+  };
+
+  return sendPersonalNotification(slackMemberId, message);
 }
 
-// 에러 알림
+// 에러 알림 (개인 DM 지원)
 export async function notifyError(params: {
   requestId: string;
   hospitalName: string;
   errorMessage: string;
+  slackMemberId?: string;
 }): Promise<boolean> {
-  const { requestId, hospitalName, errorMessage } = params;
+  const { requestId, hospitalName, errorMessage, slackMemberId } = params;
 
-  return sendSlackMessage({
+  const message = {
     blocks: [
       {
         type: 'header',
@@ -271,5 +361,7 @@ export async function notifyError(params: {
         blocks: [],
       },
     ],
-  });
+  };
+
+  return sendPersonalNotification(slackMemberId, message);
 }

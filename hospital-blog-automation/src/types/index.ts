@@ -88,6 +88,7 @@ export interface User {
   avatar?: string;
   role: 'admin' | 'user';
   status: UserStatus;
+  slack_member_id?: string; // Slack 개인 알림용
   created_at: string;
   approved_at?: string;
   blocked_at?: string;
