@@ -4,12 +4,16 @@ import { createContext, useContext, useState, useCallback, useEffect, ReactNode 
 import { useSession, signOut } from 'next-auth/react';
 import { BlogRequest, User, NewRequestFormData, ChatMessage, Hospital } from '@/types';
 
+type AuthStatus = 'unauthenticated' | 'pending' | 'blocked' | 'authenticated';
+
 interface AppState {
   user: User | null;
+  users: User[];
   hospitals: Hospital[];
   requests: BlogRequest[];
   isLoading: boolean;
   dataSource: 'mock' | 'sheets';
+  authStatus: AuthStatus;
 }
 
 interface AppContextType extends AppState {
@@ -19,6 +23,9 @@ interface AppContextType extends AppState {
   sendMessage: (requestId: string, message: string) => void;
   refreshRequests: () => void;
   refreshData: () => Promise<void>;
+  approveUser: (userId: string) => void;
+  blockUser: (userId: string) => void;
+  unblockUser: (userId: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -28,10 +35,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   const [state, setState] = useState<AppState>({
     user: null,
+    users: [],
     hospitals: [],
     requests: [],
     isLoading: true,
     dataSource: 'sheets',
+    authStatus: 'unauthenticated',
   });
 
   // Sync user from session
@@ -48,9 +57,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           status: 'approved',
           created_at: new Date().toISOString(),
         },
+        authStatus: 'authenticated',
       }));
     } else {
-      setState((prev) => ({ ...prev, user: null }));
+      setState((prev) => ({ ...prev, user: null, authStatus: 'unauthenticated' }));
     }
   }, [session]);
 
@@ -436,6 +446,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const approveUser = useCallback((userId: string) => {
+    setState((prev) => ({
+      ...prev,
+      users: prev.users.map((u) =>
+        u.id === userId ? { ...u, status: 'approved' as const, approved_at: new Date().toISOString() } : u
+      ),
+    }));
+  }, []);
+
+  const blockUser = useCallback((userId: string) => {
+    setState((prev) => ({
+      ...prev,
+      users: prev.users.map((u) =>
+        u.id === userId ? { ...u, status: 'blocked' as const, blocked_at: new Date().toISOString() } : u
+      ),
+    }));
+  }, []);
+
+  const unblockUser = useCallback((userId: string) => {
+    setState((prev) => ({
+      ...prev,
+      users: prev.users.map((u) =>
+        u.id === userId ? { ...u, status: 'approved' as const, blocked_at: undefined } : u
+      ),
+    }));
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
@@ -446,6 +483,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         sendMessage,
         refreshRequests,
         refreshData,
+        approveUser,
+        blockUser,
+        unblockUser,
       }}
     >
       {children}
