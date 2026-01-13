@@ -34,12 +34,18 @@ export function EmployeeStatistics() {
 
     // 모든 요청을 순회하며 직원별 통계 집계
     requests.forEach((request) => {
-      const email = request.created_by;
-      const user = users.find((u) => u.email === email);
+      // 이메일 정규화 (빈값, undefined, null 처리)
+      const rawEmail = request.created_by;
+      const email = (rawEmail && typeof rawEmail === 'string') ? rawEmail.trim().toLowerCase() : '';
+
+      // 빈 이메일은 건너뛰기
+      if (!email) return;
+
+      const user = users.find((u) => u.email.toLowerCase() === email);
 
       if (!statsMap.has(email)) {
         statsMap.set(email, {
-          email,
+          email: rawEmail?.trim() || email, // 원본 이메일 표시용
           name: user?.name || email.split('@')[0],
           total: 0,
           completed: 0,
@@ -76,10 +82,8 @@ export function EmployeeStatistics() {
       stats.completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
     });
 
-    // 빈 이메일 제외하고 총 요청 수 기준 내림차순 정렬
-    return Array.from(statsMap.values())
-      .filter((s) => s.email && s.email.trim() !== '')
-      .sort((a, b) => b.total - a.total);
+    // 총 요청 수 기준 내림차순 정렬 (빈 이메일은 이미 위에서 제외됨)
+    return Array.from(statsMap.values()).sort((a, b) => b.total - a.total);
   }, [requests, users]);
 
   // 전체 통계
