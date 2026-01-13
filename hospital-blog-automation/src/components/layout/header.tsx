@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Building2, LogOut, Settings, User, Users, FileText, Shield } from 'lucide-react';
+import { Building2, LogOut, Settings, Users, FileText, Shield } from 'lucide-react';
 
 interface HeaderProps {
   currentTab?: 'dashboard' | 'users';
@@ -89,17 +89,15 @@ export function Header({ currentTab = 'dashboard', onTabChange }: HeaderProps) {
                 </div>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => {}}>
-                <User className="mr-2 h-4 w-4" />
-                <span>프로필</span>
-              </DropdownMenuItem>
               {isAdmin && (
-                <DropdownMenuItem onSelect={() => {}}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>병원 설정</span>
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem onSelect={() => window.location.href = '/setup'}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>시트 설정</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
               )}
-              <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={logout} className="text-destructive">
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>로그아웃</span>
