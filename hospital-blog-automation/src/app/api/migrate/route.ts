@@ -13,6 +13,73 @@ function getSpreadsheetId() {
   return process.env.GOOGLE_SPREADSHEET_ID || '';
 }
 
+// PUT: created_by 필드 업데이트
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const defaultEmail = body.email || 'byunggeuk.son@philomedi.com';
+
+    if (!process.env.GOOGLE_SERVICE_ACCOUNT_KEY || !process.env.GOOGLE_SPREADSHEET_ID) {
+      return NextResponse.json(
+        { error: 'Google Sheets 환경변수가 설정되지 않았습니다.' },
+        { status: 400 }
+      );
+    }
+
+    const auth = getAuthClient();
+    const sheets = google.sheets({ version: 'v4', auth });
+    const spreadsheetId = getSpreadsheetId();
+
+    // 현재 데이터 가져오기
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: '요청목록!A:P',
+    });
+
+    const rows = response.data.values || [];
+    if (rows.length <= 1) {
+      return NextResponse.json({ message: '업데이트할 데이터가 없습니다.', updated: 0 });
+    }
+
+    // created_by가 비어있는 행만 업데이트
+    let updatedCount = 0;
+    const updatedRows = rows.map((row, index) => {
+      if (index === 0) return row; // 헤더 건너뛰기
+
+      // created_by (16번째 컬럼, 인덱스 15)가 비어있으면 기본값 설정
+      if (!row[15] || row[15] === '') {
+        const newRow = [...row];
+        while (newRow.length < 16) newRow.push(''); // 컬럼 수 맞추기
+        newRow[15] = defaultEmail;
+        updatedCount++;
+        return newRow;
+      }
+      return row;
+    });
+
+    // 시트 업데이트
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `요청목록!A1:P${updatedRows.length}`,
+      valueInputOption: 'RAW',
+      requestBody: { values: updatedRows },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `created_by 필드 업데이트 완료`,
+      updated: updatedCount,
+      email: defaultEmail,
+    });
+  } catch (error) {
+    console.error('Update created_by Error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : '업데이트 중 오류가 발생했습니다.' },
+      { status: 500 }
+    );
+  }
+}
+
 // POST: 시트 컬럼 순서 수정 및 format_type 드롭다운 추가
 export async function POST() {
   try {
