@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useApp } from '@/lib/store';
-import { mockHospitals, formatOptions } from '@/lib/mock-data';
+import { formatOptions } from '@/lib/mock-data';
 import { NewRequestFormData, FormatType } from '@/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,7 +31,8 @@ interface NewRequestModalProps {
 }
 
 export function NewRequestModal({ open, onOpenChange }: NewRequestModalProps) {
-  const { createRequest } = useApp();
+  const { createRequest, hospitals } = useApp();
+  const activeHospitals = hospitals.filter(h => h.is_active !== false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCustomFormat, setShowCustomFormat] = useState(false);
   const [formData, setFormData] = useState<NewRequestFormData>({
@@ -111,7 +112,7 @@ export function NewRequestModal({ open, onOpenChange }: NewRequestModalProps) {
                   <SelectValue placeholder="병원을 선택하세요" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockHospitals.map((hospital) => (
+                  {activeHospitals.map((hospital) => (
                     <SelectItem
                       key={hospital.hospital_id}
                       value={hospital.hospital_id}

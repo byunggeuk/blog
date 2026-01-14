@@ -54,7 +54,8 @@ export async function getHospitals(): Promise<Hospital[]> {
       prompt_name: row[5] || '',
       system_prompt: row[6] || '',
       created_at: row[7] || new Date().toISOString(),
-      is_active: row[8] === 'TRUE' || row[8] === 'true' || row[8] === '1',
+      // is_active: 명시적으로 FALSE가 아니면 true (빈 값이나 없는 경우도 true)
+      is_active: row[8] !== 'FALSE' && row[8] !== 'false' && row[8] !== '0',
     }));
 }
 
