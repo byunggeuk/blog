@@ -232,13 +232,17 @@ ${contentRef.current.innerHTML}
                   padding: '12px 16px',
                   margin: '16px 0',
                   borderRadius: '0 8px 8px 0',
-                  color: '#1e293b',
+                  color: '#111827',
                   fontStyle: 'normal',
                 }}
               >
-                {children}
+                <div style={{ color: '#111827' }}>{children}</div>
               </blockquote>
             ),
+            p: ({ children, ...props }) => {
+              // blockquote 내부의 p 태그는 부모에서 처리
+              return <p style={{ color: 'inherit' }} {...props}>{children}</p>;
+            },
           }}
         >
           {content}
