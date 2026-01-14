@@ -221,7 +221,26 @@ ${contentRef.current.innerHTML}
           prose-td:px-4 prose-td:py-2 prose-td:border
         "
       >
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            blockquote: ({ children }) => (
+              <blockquote
+                style={{
+                  borderLeft: '4px solid #3b82f6',
+                  backgroundColor: '#eff6ff',
+                  padding: '12px 16px',
+                  margin: '16px 0',
+                  borderRadius: '0 8px 8px 0',
+                  color: '#1e293b',
+                  fontStyle: 'normal',
+                }}
+              >
+                {children}
+              </blockquote>
+            ),
+          }}
+        >
           {content}
         </ReactMarkdown>
       </div>
