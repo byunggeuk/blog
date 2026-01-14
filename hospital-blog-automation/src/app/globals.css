@@ -140,3 +140,25 @@
 .prose blockquote * {
   color: #111827 !important;
 }
+
+/* 마크다운 인라인 코드 스타일 */
+.prose code {
+  background-color: #f1f5f9 !important;
+  color: #1e293b !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  font-size: 0.875em !important;
+}
+
+/* 마크다운 코드 블록 스타일 */
+.prose pre {
+  background-color: #f1f5f9 !important;
+  color: #1e293b !important;
+  padding: 16px !important;
+  border-radius: 8px !important;
+}
+
+.prose pre code {
+  background-color: transparent !important;
+  padding: 0 !important;
+}
