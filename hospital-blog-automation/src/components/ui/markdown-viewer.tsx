@@ -210,7 +210,7 @@ ${contentRef.current.innerHTML}
           prose-p:text-base prose-p:leading-relaxed prose-p:my-4
           prose-ul:my-4 prose-ol:my-4
           prose-li:my-1
-          prose-blockquote:border-l-4 prose-blockquote:border-blue-400 prose-blockquote:bg-blue-50 prose-blockquote:pl-4 prose-blockquote:pr-4 prose-blockquote:py-3 prose-blockquote:rounded-r-lg prose-blockquote:not-italic prose-blockquote:text-slate-800
+          prose-blockquote:border-l-4 prose-blockquote:border-blue-500 prose-blockquote:bg-blue-50 prose-blockquote:pl-4 prose-blockquote:pr-4 prose-blockquote:py-3 prose-blockquote:rounded-r-lg prose-blockquote:not-italic prose-blockquote:text-gray-900 [&_blockquote_p]:text-gray-900 [&_blockquote]:text-gray-900
           prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none
           prose-pre:bg-slate-100 prose-pre:rounded-lg
           prose-strong:font-semibold
