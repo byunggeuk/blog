@@ -124,3 +124,19 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* 마크다운 콜아웃(blockquote) 스타일 */
+.prose blockquote {
+  border-left: 4px solid #3b82f6 !important;
+  background-color: #eff6ff !important;
+  padding: 12px 16px !important;
+  margin: 16px 0 !important;
+  border-radius: 0 8px 8px 0 !important;
+  font-style: normal !important;
+}
+
+.prose blockquote,
+.prose blockquote p,
+.prose blockquote * {
+  color: #111827 !important;
+}
