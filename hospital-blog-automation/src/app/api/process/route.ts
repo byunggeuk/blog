@@ -135,7 +135,14 @@ import { NextResponse } from 'next/server';
   2. 환자가 이해하기 쉬운 언어 사용
   3. SEO를 고려한 키워드 배치
   4. 병원의 전문성과 신뢰성 강조
-  5. 마크다운 형식으로 작성 (제목은 ##, 소제목은 ###)`;
+  5. 마크다운 형식으로 작성 (제목은 ##, 소제목은 ###)
+
+  ## 중요: 정보 정확성 원칙 (할루시네이션 방지)
+  - 확인되지 않은 구체적 수치(%, 통계, 연구 결과)를 만들어내지 마세요.
+  - 구체적인 환자 사례는 "예시" 또는 "가상 사례"임을 반드시 명시하세요.
+  - 모르는 정보는 일반적인 설명으로 대체하고, 절대 지어내지 마세요.
+  - 의학적 정보는 일반적으로 알려진 내용만 작성하세요.
+  - 특정 연구나 논문을 인용할 때는 "연구에 따르면" 대신 "일반적으로 알려진 바에 따르면"으로 표현하세요.`;
 
     const userPrompt = `다음 조건에 맞는 블로그 글을 작성해주세요.
 
@@ -149,6 +156,7 @@ import { NextResponse } from 'next/server';
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 8096,
+      temperature: 0.3,
       system: baseSystemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });
