@@ -38,6 +38,7 @@ import {
   ArrowUp,
   ArrowDown,
   Archive,
+  Undo2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -63,7 +64,7 @@ type SortDirection = 'asc' | 'desc';
 const ACTIVE_STATUSES: RequestStatus[] = ['대기', '생성중', '완료', '수정요청', '수정완료', '에러'];
 
 export function DashboardContent() {
-  const { requests, hospitals, isLoading, refreshRequests, archiveRequest } = useApp();
+  const { requests, hospitals, isLoading, refreshRequests, archiveRequest, restoreRequest } = useApp();
   const [showNewRequestModal, setShowNewRequestModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<BlogRequest | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -268,6 +269,11 @@ export function DashboardContent() {
     await archiveRequest(requestId);
   };
 
+  const handleRestore = async (e: React.MouseEvent, requestId: string) => {
+    e.stopPropagation();
+    await restoreRequest(requestId);
+  };
+
   const SortableHeader = ({ field, children, className }: { field: SortField; children: React.ReactNode; className?: string }) => (
     <TableHead
       className={`cursor-pointer select-none hover:bg-muted/50 ${className || ''}`}
@@ -295,13 +301,13 @@ export function DashboardContent() {
                 <SortableHeader field="purpose" className="min-w-[200px]">목적</SortableHeader>
                 <SortableHeader field="status" className="w-[100px]">상태</SortableHeader>
                 <SortableHeader field="created_at" className="w-[100px]">날짜</SortableHeader>
-                {activeTab === 'active' && <TableHead className="w-[100px]" />}
+                <TableHead className="w-[100px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredRequests.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={activeTab === 'active' ? 9 : 8} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                     {activeTab === 'archive'
                       ? '아카이브된 요청이 없습니다.'
                       : searchQuery || hospitalFilter !== 'all' || statusFilter !== 'all' || formatFilter !== 'all' || dateFilter !== 'all'
@@ -346,21 +352,30 @@ export function DashboardContent() {
                     <TableCell className="text-muted-foreground text-sm">
                       {format(new Date(request.created_at), 'MM-dd HH:mm', { locale: ko })}
                     </TableCell>
-                    {activeTab === 'active' && (
-                      <TableCell>
-                        {(request.status === '완료' || request.status === '수정완료') && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-xs gap-1"
-                            onClick={(e) => handleArchive(e, request.request_id)}
-                          >
-                            <Archive className="h-3 w-3" />
-                            업로드완료
-                          </Button>
-                        )}
-                      </TableCell>
-                    )}
+                    <TableCell>
+                      {activeTab === 'active' && (request.status === '완료' || request.status === '수정완료') && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs gap-1"
+                          onClick={(e) => handleArchive(e, request.request_id)}
+                        >
+                          <Archive className="h-3 w-3" />
+                          업로드완료
+                        </Button>
+                      )}
+                      {activeTab === 'archive' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs gap-1"
+                          onClick={(e) => handleRestore(e, request.request_id)}
+                        >
+                          <Undo2 className="h-3 w-3" />
+                          복원
+                        </Button>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))
               )}

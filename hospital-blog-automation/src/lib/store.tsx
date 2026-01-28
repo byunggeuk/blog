@@ -21,6 +21,7 @@ interface AppContextType extends AppState {
   createRequest: (data: NewRequestFormData) => Promise<BlogRequest>;
   updateRequestStatus: (requestId: string, status: BlogRequest['status']) => void;
   archiveRequest: (requestId: string) => Promise<void>;
+  restoreRequest: (requestId: string) => Promise<void>;
   sendMessage: (requestId: string, message: string) => void;
   refreshRequests: () => void;
   refreshData: () => Promise<void>;
@@ -368,6 +369,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [state.requests]);
 
+  const restoreRequest = useCallback(async (requestId: string) => {
+    const request = state.requests.find((r) => r.request_id === requestId);
+    if (!request) return;
+
+    const restoredStatus = request.revision_count > 0 ? '수정완료' : '완료';
+    const updatedRequest: BlogRequest = { ...request, status: restoredStatus };
+
+    setState((prev) => ({
+      ...prev,
+      requests: prev.requests.map((r) => (r.request_id === requestId ? updatedRequest : r)),
+    }));
+
+    try {
+      await fetch('/api/requests', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedRequest),
+      });
+    } catch (error) {
+      console.error('복원 처리 실패:', error);
+      setState((prev) => ({
+        ...prev,
+        requests: prev.requests.map((r) => (r.request_id === requestId ? request : r)),
+      }));
+    }
+  }, [state.requests]);
+
   const sendMessage = useCallback(
     async (requestId: string, message: string) => {
       const now = new Date().toISOString();
@@ -621,6 +649,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         createRequest,
         updateRequestStatus,
         archiveRequest,
+        restoreRequest,
         sendMessage,
         refreshRequests,
         refreshData,
