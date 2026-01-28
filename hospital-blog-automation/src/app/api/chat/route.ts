@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { getReferenceContents } from '@/lib/google-drive';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -18,6 +19,7 @@ interface ChatRequest {
     content: string;
   }>;
   isInitialGeneration: boolean;
+  referenceFolderId?: string;
 }
 
 const BLOG_SYSTEM_PROMPT = `당신은 병원 마케팅을 위한 전문 블로그 글 작성 AI입니다. 다음 가이드라인을 준수하세요:
@@ -86,6 +88,7 @@ export async function POST(request: NextRequest) {
       formatCustom,
       messages,
       isInitialGeneration,
+      referenceFolderId,
     } = body;
 
     if (!process.env.ANTHROPIC_API_KEY) {
@@ -94,6 +97,37 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // 참고자료 읽기
+    let referenceSection = '';
+    if (referenceFolderId) {
+      try {
+        const referenceContents = await getReferenceContents(referenceFolderId);
+        if (referenceContents) {
+          referenceSection = `
+
+## 참고자료
+아래는 이 병원에서 제공한 참고자료입니다. 반드시 다음 규칙을 따르세요:
+- 아래 참고자료에 포함된 정보를 우선적으로 활용하세요
+- 참고자료에 없는 의료 정보는 '일반적으로 알려진 바에 따르면'과 같은 표현을 사용하세요
+- 참고자료의 내용과 모순되는 내용을 절대 작성하지 마세요
+
+${referenceContents}`;
+        }
+      } catch (error) {
+        console.error('참고자료 읽기 실패:', error);
+      }
+    }
+
+    // 수정 모드 프롬프트
+    const editModeSection = !isInitialGeneration ? `
+
+## 수정 모드 규칙
+지금은 기존 글의 수정 요청입니다. 반드시 다음 규칙을 따르세요:
+1. 사용자가 지적한 부분만 수정하세요
+2. 지적하지 않은 부분은 원문 그대로 유지하세요
+3. 글의 전체 구조, 제목, 소제목을 변경하지 마세요 (사용자가 명시적으로 요청한 경우 제외)
+4. 수정된 글 전체를 출력하되, 변경하지 않은 부분은 원문과 동일해야 합니다` : '';
 
     const systemPrompt = `${BLOG_SYSTEM_PROMPT}
 
@@ -105,7 +139,7 @@ ${hospitalSystemPrompt ? `- **병원별 가이드**: ${hospitalSystemPrompt}` : 
 - **타겟 키워드**: ${targetKeyword}
 - **주제**: ${topicKeyword}
 - **목적**: ${purpose}
-- **글 구조**: ${formatType}${formatCustom ? `\n- **추가 요청**: ${formatCustom}` : ''}`;
+- **글 구조**: ${formatType}${formatCustom ? `\n- **추가 요청**: ${formatCustom}` : ''}${referenceSection}${editModeSection}`;
 
     const claudeMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 

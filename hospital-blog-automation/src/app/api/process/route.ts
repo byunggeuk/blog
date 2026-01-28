@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
   import { google } from 'googleapis';
   import Anthropic from '@anthropic-ai/sdk';
+  import { getReferenceContents } from '@/lib/google-drive';
 
   // Google Sheets 인증
   function getAuthClient() {
@@ -122,7 +123,8 @@ import { NextResponse } from 'next/server';
     topicKeyword: string,
     purpose: string,
     formatType: string,
-    formatCustom?: string
+    formatCustom?: string,
+    referenceText?: string
   ) {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -164,7 +166,15 @@ import { NextResponse } from 'next/server';
   1. 이 숫자/통계의 출처를 댈 수 있는가? → 출처 없으면 삭제
   2. 이 환자 사례는 실제인가? → 가상이면 삭제 (가상 사례도 쓰지 마세요)
   3. 이 기간/효과를 보장할 수 있는가? → 보장 못하면 "개인차가 있습니다" 추가
-  4. 이 비교/우위 주장의 근거가 있는가? → 근거 없으면 삭제`;
+  4. 이 비교/우위 주장의 근거가 있는가? → 근거 없으면 삭제` + (referenceText ? `
+
+  ## 참고자료
+  아래는 이 병원에서 제공한 참고자료입니다. 반드시 다음 규칙을 따르세요:
+  - 아래 참고자료에 포함된 정보를 우선적으로 활용하세요
+  - 참고자료에 없는 의료 정보는 '일반적으로 알려진 바에 따르면'과 같은 표현을 사용하세요
+  - 참고자료의 내용과 모순되는 내용을 절대 작성하지 마세요
+
+  ${referenceText}` : '');
 
     const userPrompt = `다음 조건에 맞는 블로그 글을 작성해주세요.
 
@@ -243,6 +253,16 @@ import { NextResponse } from 'next/server';
             continue;
           }
 
+          // 참고자료 읽기
+          let referenceText = '';
+          if (hospital.reference_folder_id) {
+            try {
+              referenceText = await getReferenceContents(hospital.reference_folder_id);
+            } catch (refError) {
+              console.error(`참고자료 읽기 실패 (${hospital.hospital_name}):`, refError);
+            }
+          }
+
           const content = await generateBlogContent(
             hospital.hospital_name,
             hospital.system_prompt,
@@ -250,7 +270,8 @@ import { NextResponse } from 'next/server';
             topicKeyword,
             purpose,
             formatType,
-            formatCustom
+            formatCustom,
+            referenceText
           );
 
           const fileName = `${targetKeyword}_${requestId}`;

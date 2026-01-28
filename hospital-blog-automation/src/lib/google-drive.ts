@@ -161,6 +161,98 @@ export async function getFileContent(
   return response.data as string;
 }
 
+// 폴더 내 파일 목록 조회
+export async function listFolderFiles(folderId: string): Promise<Array<{ id: string; name: string; mimeType: string }>> {
+  const auth = getAuthClient();
+  const drive = google.drive({ version: 'v3', auth });
+
+  const response = await drive.files.list({
+    q: `'${folderId}' in parents and trashed = false`,
+    fields: 'files(id, name, mimeType)',
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+  });
+
+  return (response.data.files || []).map((file) => ({
+    id: file.id || '',
+    name: file.name || '',
+    mimeType: file.mimeType || '',
+  }));
+}
+
+// 파일 내용을 텍스트로 읽기
+export async function getFileContentAsText(fileId: string, mimeType: string): Promise<string> {
+  const auth = getAuthClient();
+  const drive = google.drive({ version: 'v3', auth });
+
+  // Google Docs 형식인 경우 텍스트로 export
+  if (mimeType === 'application/vnd.google-apps.document') {
+    const response = await drive.files.export({
+      fileId,
+      mimeType: 'text/plain',
+    });
+    return response.data as string;
+  }
+
+  // 일반 텍스트/마크다운 파일인 경우 직접 다운로드
+  const response = await drive.files.get({
+    fileId,
+    alt: 'media',
+    supportsAllDrives: true,
+  });
+
+  return response.data as string;
+}
+
+// 참고자료 폴더의 모든 내용을 합쳐서 반환
+const MAX_REFERENCE_SIZE = 50000; // 최대 50,000자
+
+export async function getReferenceContents(folderId: string): Promise<string> {
+  const supportedMimeTypes = [
+    'text/plain',
+    'text/markdown',
+    'text/csv',
+    'application/vnd.google-apps.document',
+  ];
+
+  try {
+    const files = await listFolderFiles(folderId);
+    const textFiles = files.filter(
+      (f) => supportedMimeTypes.includes(f.mimeType) ||
+        f.name.endsWith('.md') ||
+        f.name.endsWith('.txt') ||
+        f.name.endsWith('.csv')
+    );
+
+    if (textFiles.length === 0) {
+      return '';
+    }
+
+    let totalContent = '';
+
+    for (const file of textFiles) {
+      try {
+        const content = await getFileContentAsText(file.id, file.mimeType);
+        const section = `### ${file.name}\n${content}\n\n`;
+
+        if (totalContent.length + section.length > MAX_REFERENCE_SIZE) {
+          totalContent += `### ${file.name}\n(용량 제한으로 생략됨)\n\n`;
+          break;
+        }
+
+        totalContent += section;
+      } catch (error) {
+        console.error(`참고자료 읽기 실패 (${file.name}):`, error);
+      }
+    }
+
+    return totalContent;
+  } catch (error) {
+    console.error('참고자료 폴더 조회 실패:', error);
+    return '';
+  }
+}
+
 // 파일 정보 가져오기
 export async function getFileInfo(fileId: string): Promise<{
   name: string;

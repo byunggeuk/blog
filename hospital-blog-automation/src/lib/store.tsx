@@ -228,6 +228,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             formatCustom: data.format_custom,
             messages: [],
             isInitialGeneration: true,
+            referenceFolderId: hospital?.reference_folder_id || '',
           }),
         });
 
@@ -390,6 +391,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             formatCustom: request.format_custom,
             messages: previousMessages,
             isInitialGeneration: false,
+            referenceFolderId: hospital?.reference_folder_id || '',
           }),
         });
 
