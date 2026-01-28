@@ -18,7 +18,8 @@ export type RequestStatus =
   | '완료'
   | '수정요청'
   | '수정완료'
-  | '에러';
+  | '에러'
+  | '업로드완료';
 
 // 글 구조 타입
 export type FormatType =

@@ -47,6 +47,7 @@ const statusConfig: Record<
   수정요청: { label: '수정요청', variant: 'secondary' },
   수정완료: { label: '수정완료', variant: 'default' },
   에러: { label: '에러', variant: 'destructive' },
+  업로드완료: { label: '업로드완료', variant: 'outline' },
 };
 
 type ViewMode = 'chat' | 'preview' | 'versions';

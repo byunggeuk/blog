@@ -20,6 +20,7 @@ interface AppContextType extends AppState {
   logout: () => void;
   createRequest: (data: NewRequestFormData) => Promise<BlogRequest>;
   updateRequestStatus: (requestId: string, status: BlogRequest['status']) => void;
+  archiveRequest: (requestId: string) => Promise<void>;
   sendMessage: (requestId: string, message: string) => void;
   refreshRequests: () => void;
   refreshData: () => Promise<void>;
@@ -340,6 +341,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const archiveRequest = useCallback(async (requestId: string) => {
+    const request = state.requests.find((r) => r.request_id === requestId);
+    if (!request) return;
+
+    const updatedRequest: BlogRequest = { ...request, status: '업로드완료' };
+
+    setState((prev) => ({
+      ...prev,
+      requests: prev.requests.map((r) => (r.request_id === requestId ? updatedRequest : r)),
+    }));
+
+    try {
+      await fetch('/api/requests', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedRequest),
+      });
+    } catch (error) {
+      console.error('아카이브 처리 실패:', error);
+      // Revert on failure
+      setState((prev) => ({
+        ...prev,
+        requests: prev.requests.map((r) => (r.request_id === requestId ? request : r)),
+      }));
+    }
+  }, [state.requests]);
+
   const sendMessage = useCallback(
     async (requestId: string, message: string) => {
       const now = new Date().toISOString();
@@ -592,6 +620,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         logout,
         createRequest,
         updateRequestStatus,
+        archiveRequest,
         sendMessage,
         refreshRequests,
         refreshData,
