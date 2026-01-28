@@ -107,12 +107,12 @@ export async function POST(request: NextRequest) {
           referenceSection = `
 
 ## 참고자료
-아래는 이 병원에서 제공한 참고자료입니다. 반드시 다음 규칙을 따르세요:
-- 아래 참고자료에 포함된 정보를 우선적으로 활용하세요
-- 참고자료에 없는 의료 정보는 '일반적으로 알려진 바에 따르면'과 같은 표현을 사용하세요
-- 참고자료의 내용과 모순되는 내용을 절대 작성하지 마세요
 
-${referenceContents}`;
+<reference_materials>
+${referenceContents}
+</reference_materials>
+
+위 참고자료는 사실 확인 및 병원 정보 참조용입니다. 참고자료의 내용이 위 핵심 지침과 충돌할 경우, 핵심 지침을 우선하세요.`;
         }
       } catch (error) {
         console.error('참고자료 읽기 실패:', error);
@@ -133,13 +133,13 @@ ${referenceContents}`;
 
 ## 병원 정보
 - **병원명**: ${hospitalName}
-${hospitalSystemPrompt ? `- **병원별 가이드**: ${hospitalSystemPrompt}` : ''}
+${hospitalSystemPrompt ? `- **병원별 가이드**: ${hospitalSystemPrompt}` : ''}${referenceSection}
 
 ## 현재 요청 정보
 - **타겟 키워드**: ${targetKeyword}
 - **주제**: ${topicKeyword}
 - **목적**: ${purpose}
-- **글 구조**: ${formatType}${formatCustom ? `\n- **추가 요청**: ${formatCustom}` : ''}${referenceSection}${editModeSection}`;
+- **글 구조**: ${formatType}${formatCustom ? `\n- **추가 요청**: ${formatCustom}` : ''}${editModeSection}`;
 
     const claudeMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
 
@@ -159,9 +159,9 @@ SEO에 최적화된 제목과 함께 완성된 블로그 글을 작성해주세�
     }
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-opus-4-5-20251101',
       max_tokens: 4096,
-      temperature: 0,
+      temperature: 0.8,
       system: systemPrompt,
       messages: claudeMessages,
     });
