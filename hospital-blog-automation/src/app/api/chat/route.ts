@@ -143,7 +143,7 @@ ${hospitalSystemPrompt ? `- **병원별 가이드**: ${hospitalSystemPrompt}` : 
 목적: ${purpose}
 ${formatCustom ? `추가 요청: ${formatCustom}` : ''}
 
-SEO에 최적화된 제목과 함께 완성된 블로그 글을 작성해주세요.`,
+반드시 대제목(##) 1개, 소제목(###) 6개, 소제목 없는 마무리 문단 1개 구조를 지켜주세요. SEO에 최적화된 제목과 함께 완성된 블로그 글을 작성해주세요.`,
       });
     } else {
       claudeMessages.push(...messages);
