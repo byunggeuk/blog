@@ -23,7 +23,7 @@ import { NextResponse } from 'next/server';
   async function getHospitalById(sheets: any, spreadsheetId: string, hospitalId: string) {
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: '병원설정!A2:H100',
+      range: '병원설정!A2:I100',
     });
 
     const rows = response.data.values || [];
@@ -35,7 +35,8 @@ import { NextResponse } from 'next/server';
           blog_url: row[2] || '',
           reference_folder_id: row[3] || '',
           output_folder_id: row[4] || '',
-          system_prompt: row[5] || '',
+          prompt_name: row[5] || '',
+          system_prompt: row[6] || '',
         };
       }
     }
@@ -109,9 +110,24 @@ import { NextResponse } from 'next/server';
       supportsAllDrives: true,
     });
 
+    const fileId = createResponse.data.id;
+    if (!fileId) {
+      throw new Error('파일 생성에 실패했습니다.');
+    }
+
+    // 파일을 누구나 볼 수 있도록 권한 설정 (링크 공유)
+    await drive.permissions.create({
+      fileId: fileId,
+      requestBody: {
+        role: 'reader',
+        type: 'anyone',
+      },
+      supportsAllDrives: true,
+    });
+
     return {
-      fileId: createResponse.data.id,
-      fileUrl: createResponse.data.webViewLink,
+      fileId,
+      fileUrl: createResponse.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`,
     };
   }
 
@@ -186,7 +202,7 @@ import { NextResponse } from 'next/server';
   위 조건에 맞춰 완성된 블로그 글을 마크다운 형식으로 작성해주세요.`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250929',
       max_tokens: 8096,
       temperature: 0,
       system: baseSystemPrompt,
