@@ -83,7 +83,7 @@ import { NextResponse } from 'next/server';
     });
   }
 
-  // Google Drive에 마크다운 파일 생성
+  // Google Drive에 마크다운 파일 생성 (공유 드라이브 필수)
   async function createMarkdownFile(
     drive: any,
     fileName: string,

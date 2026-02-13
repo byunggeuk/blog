@@ -32,7 +32,7 @@ export interface FileVersion {
   downloadUrl: string;
 }
 
-// 마크다운 파일 생성
+// 마크다운 파일 생성 (공유 드라이브 필수)
 export async function createMarkdownFile(
   fileName: string,
   content: string,
