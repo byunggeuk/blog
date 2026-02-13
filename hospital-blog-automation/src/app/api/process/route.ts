@@ -334,12 +334,19 @@ import { NextResponse } from 'next/server';
             fileUrl,
           });
         } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
           console.error(`요청 ${requestId} 처리 실패:`, error);
-          await updateRequestStatus(sheets, spreadsheetId, rowIndex, '에러');
+          const errorChatHistory = JSON.stringify([{
+            id: `error_${Date.now()}`,
+            role: 'system',
+            content: `에러 발생: ${errorMessage}`,
+            created_at: new Date().toISOString(),
+          }]);
+          await updateRequestStatus(sheets, spreadsheetId, rowIndex, '에러', undefined, undefined, undefined, errorChatHistory);
           results.push({
             requestId,
             status: 'error',
-            message: error instanceof Error ? error.message : '알 수 없는 오류',
+            message: errorMessage,
           });
         }
       }
