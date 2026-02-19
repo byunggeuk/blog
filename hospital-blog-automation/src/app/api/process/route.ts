@@ -215,6 +215,9 @@ import { NextResponse } from 'next/server';
 
   // POST: 대기 중인 요청 처리
   export async function POST() {
+    let currentProcessingRowIndex: number | null = null;
+    let currentRequestId: string | null = null;
+
     try {
       if (!process.env.GOOGLE_SERVICE_ACCOUNT_KEY || !process.env.GOOGLE_SPREADSHEET_ID) {
         return NextResponse.json(
@@ -267,6 +270,8 @@ import { NextResponse } from 'next/server';
         }
 
         try {
+          currentProcessingRowIndex = rowIndex;
+          currentRequestId = requestId;
           await updateRequestStatus(sheets, spreadsheetId, rowIndex, '생성중');
 
           const hospital = await getHospitalById(sheets, spreadsheetId, hospitalId);
@@ -334,6 +339,9 @@ import { NextResponse } from 'next/server';
             chatHistory
           );
 
+          currentProcessingRowIndex = null;
+          currentRequestId = null;
+
           results.push({
             requestId,
             status: 'completed',
@@ -349,7 +357,17 @@ import { NextResponse } from 'next/server';
             content: `에러 발생: ${errorMessage}`,
             created_at: new Date().toISOString(),
           }]);
-          await updateRequestStatus(sheets, spreadsheetId, rowIndex, '에러', undefined, undefined, undefined, errorChatHistory);
+
+          // 상태 업데이트 시도 - 실패해도 계속 진행
+          try {
+            await updateRequestStatus(sheets, spreadsheetId, rowIndex, '에러', undefined, undefined, undefined, errorChatHistory);
+          } catch (updateError) {
+            console.error(`요청 ${requestId} 상태 업데이트 실패:`, updateError);
+          }
+
+          currentProcessingRowIndex = null;
+          currentRequestId = null;
+
           results.push({
             requestId,
             status: 'error',
@@ -365,6 +383,26 @@ import { NextResponse } from 'next/server';
       });
     } catch (error) {
       console.error('Process API Error:', error);
+
+      // 처리 중이던 요청이 있으면 상태를 '대기'로 복구 시도
+      if (currentProcessingRowIndex !== null) {
+        try {
+          const auth = getAuthClient();
+          const sheets = google.sheets({ version: 'v4', auth });
+          const spreadsheetId = getSpreadsheetId();
+          const errorChatHistory = JSON.stringify([{
+            id: `error_${Date.now()}`,
+            role: 'system',
+            content: `에러 발생: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
+            created_at: new Date().toISOString(),
+          }]);
+          await updateRequestStatus(sheets, spreadsheetId, currentProcessingRowIndex, '에러', undefined, undefined, undefined, errorChatHistory);
+          console.log(`요청 ${currentRequestId} 상태를 '에러'로 복구했습니다.`);
+        } catch (recoveryError) {
+          console.error(`요청 ${currentRequestId} 상태 복구 실패:`, recoveryError);
+        }
+      }
+
       return NextResponse.json(
         { error: error instanceof Error ? error.message : '처리 중 오류가 발생했습니다.' },
         { status: 500 }
