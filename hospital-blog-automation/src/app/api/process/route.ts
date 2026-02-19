@@ -19,6 +19,17 @@ import { NextResponse } from 'next/server';
     return process.env.GOOGLE_SPREADSHEET_ID || '';
   }
 
+  // 구글 시트 친화적인 날짜 형식 (YYYY-MM-DD HH:mm:ss)
+  function formatDateForSheets(date: Date = new Date()): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  }
+
   // 병원 정보 가져오기
   async function getHospitalById(sheets: any, spreadsheetId: string, hospitalId: string) {
     const response = await sheets.spreadsheets.values.get({
@@ -271,7 +282,7 @@ import { NextResponse } from 'next/server';
         }
 
         // created_at이 비어있으면 현재 시간으로 설정
-        const createdAt = row[1] || new Date().toISOString();
+        const createdAt = row[1] || formatDateForSheets();
         if (!row[1]) {
           await sheets.spreadsheets.values.update({
             spreadsheetId,
@@ -322,7 +333,7 @@ import { NextResponse } from 'next/server';
             hospital.output_folder_id
           );
 
-          const now = new Date().toISOString();
+          const now = formatDateForSheets();
           const chatHistory = JSON.stringify([
             {
               id: `msg_${Date.now()}_1`,
@@ -367,7 +378,7 @@ import { NextResponse } from 'next/server';
             id: `error_${Date.now()}`,
             role: 'system',
             content: `에러 발생: ${errorMessage}`,
-            created_at: new Date().toISOString(),
+            created_at: formatDateForSheets(),
           }]);
 
           // 상태 업데이트 시도 - 실패해도 계속 진행
@@ -406,7 +417,7 @@ import { NextResponse } from 'next/server';
             id: `error_${Date.now()}`,
             role: 'system',
             content: `에러 발생: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
-            created_at: new Date().toISOString(),
+            created_at: formatDateForSheets(),
           }]);
           await updateRequestStatus(sheets, spreadsheetId, currentProcessingRowIndex, '에러', undefined, undefined, undefined, errorChatHistory);
           console.log(`요청 ${currentRequestId} 상태를 '에러'로 복구했습니다.`);
