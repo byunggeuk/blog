@@ -251,7 +251,8 @@ import { NextResponse } from 'next/server';
         const row = rows[i];
         const status = row[9] || '';
 
-        if (status !== '대기') continue;
+        // 이미 처리된 상태는 건너뜀 (완료, 생성중, 에러, 수정요청, 수정완료, 업로드완료)
+        if (status && status !== '대기') continue;
 
         const rowIndex = i + 2;
         const requestId = row[0] || '';
@@ -267,6 +268,17 @@ import { NextResponse } from 'next/server';
         if (!requestId || !hospitalId || !targetKeyword || !topicKeyword || !purpose || !formatType) {
           // 필수 필드가 비어있으면 건너뜀 (아직 입력 중인 상태)
           continue;
+        }
+
+        // created_at이 비어있으면 현재 시간으로 설정
+        const createdAt = row[1] || new Date().toISOString();
+        if (!row[1]) {
+          await sheets.spreadsheets.values.update({
+            spreadsheetId,
+            range: `요청목록!B${rowIndex}`,
+            valueInputOption: 'RAW',
+            requestBody: { values: [[createdAt]] },
+          });
         }
 
         try {
