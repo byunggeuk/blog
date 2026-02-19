@@ -40,7 +40,19 @@ import {
   Archive,
   Undo2,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isValid, Locale } from 'date-fns';
+
+// 안전하게 날짜 포맷팅 (유효하지 않은 날짜는 '-' 반환)
+function safeFormatDate(dateStr: string | undefined, formatStr: string, options?: { locale?: Locale }): string {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  if (!isValid(date)) return '-';
+  try {
+    return format(date, formatStr, options);
+  } catch {
+    return '-';
+  }
+}
 import { ko } from 'date-fns/locale';
 
 const statusConfig: Record<
@@ -198,6 +210,9 @@ export function DashboardContent() {
       // Date filter
       if (dateFilter !== 'all') {
         const requestDate = new Date(request.created_at);
+        // 유효하지 않은 날짜는 필터링하지 않음 (모두 포함)
+        if (!isValid(requestDate)) return true;
+
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
@@ -350,7 +365,7 @@ export function DashboardContent() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {format(new Date(request.created_at), 'MM-dd HH:mm', { locale: ko })}
+                      {safeFormatDate(request.created_at, 'MM-dd HH:mm', { locale: ko })}
                     </TableCell>
                     <TableCell>
                       {activeTab === 'active' && (request.status === '완료' || request.status === '수정완료') && (

@@ -163,6 +163,13 @@ export async function deleteHospital(hospitalId: string): Promise<void> {
 
 // ============ 요청 데이터 ============
 
+// 유효한 ISO 날짜 문자열인지 확인
+function isValidDateString(dateStr: string): boolean {
+  if (!dateStr || dateStr.trim() === '') return false;
+  const date = new Date(dateStr);
+  return !isNaN(date.getTime());
+}
+
 export async function getRequests(): Promise<BlogRequest[]> {
   const auth = getAuthClient();
   const sheets = google.sheets({ version: 'v4', auth });
@@ -191,9 +198,14 @@ export async function getRequests(): Promise<BlogRequest[]> {
     // target_keyword(4), topic_keyword(5), purpose(6), format_type(7), format_custom(8),
     // status(9), result_doc_id(10), result_doc_url(11), revision_count(12),
     // completed_at(13), chat_history(14), created_by(15)
+
+    // 날짜 값 검증 및 기본값 설정
+    const createdAt = isValidDateString(row[1]) ? row[1] : new Date().toISOString();
+    const completedAt = isValidDateString(row[13]) ? row[13] : undefined;
+
     return {
       request_id: row[0] || '',
-      created_at: row[1] || new Date().toISOString(),
+      created_at: createdAt,
       hospital_id: row[2] || '',
       hospital_name: row[3] || '',
       target_keyword: row[4] || '',
@@ -205,7 +217,7 @@ export async function getRequests(): Promise<BlogRequest[]> {
       result_doc_id: row[10] || undefined,
       result_doc_url: row[11] || undefined,
       revision_count: parseInt(row[12] || '0', 10),
-      completed_at: row[13] || undefined,
+      completed_at: completedAt,
       chat_history: chatHistory,
       created_by: row[15] || '',
     };
