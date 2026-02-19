@@ -259,6 +259,13 @@ import { NextResponse } from 'next/server';
         const formatType = row[7] || '';
         const formatCustom = row[8] || '';
 
+        // 필수 필드 검증: 모든 필수 정보가 입력되었는지 확인
+        // (format_custom은 선택사항이므로 검증하지 않음)
+        if (!requestId || !hospitalId || !targetKeyword || !topicKeyword || !purpose || !formatType) {
+          // 필수 필드가 비어있으면 건너뜀 (아직 입력 중인 상태)
+          continue;
+        }
+
         try {
           await updateRequestStatus(sheets, spreadsheetId, rowIndex, '생성중');
 
