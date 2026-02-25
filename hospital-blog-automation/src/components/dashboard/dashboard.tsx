@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { Header } from '@/components/layout/header';
-import { DashboardContent } from '@/components/dashboard/dashboard-content';
+import { Header } from "@/components/layout/header";
+import { DashboardContent } from "@/components/dashboard/dashboard-content";
 
 export function Dashboard() {
   return (

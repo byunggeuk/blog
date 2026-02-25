@@ -1,20 +1,35 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle2, Loader2, AlertCircle, Database, FileSpreadsheet } from 'lucide-react';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  CheckCircle2,
+  Loader2,
+  AlertCircle,
+  Database,
+  FileSpreadsheet,
+} from "lucide-react";
 
 export default function SetupPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [result, setResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   const handleSetup = async () => {
     setIsLoading(true);
     setResult(null);
 
     try {
-      const response = await fetch('/api/setup', { method: 'POST' });
+      const response = await fetch("/api/setup", { method: "POST" });
       const data = await response.json();
 
       if (response.ok) {
@@ -23,7 +38,7 @@ export default function SetupPage() {
         setResult({ success: false, message: data.error });
       }
     } catch (error) {
-      setResult({ success: false, message: '네트워크 오류가 발생했습니다.' });
+      setResult({ success: false, message: "네트워크 오류가 발생했습니다." });
     } finally {
       setIsLoading(false);
     }
@@ -50,11 +65,15 @@ export default function SetupPage() {
             </h3>
             <ul className="text-sm text-muted-foreground space-y-2">
               <li className="flex items-start gap-2">
-                <span className="font-mono bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">병원설정</span>
+                <span className="font-mono bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">
+                  병원설정
+                </span>
                 <span>병원 정보, 폴더 ID, 시스템 프롬프트 관리</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="font-mono bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs">요청목록</span>
+                <span className="font-mono bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs">
+                  요청목록
+                </span>
                 <span>블로그 글 요청 및 진행 상태 관리</span>
               </li>
             </ul>
@@ -75,8 +94,8 @@ export default function SetupPage() {
             <div
               className={`flex items-center gap-2 p-3 rounded-lg ${
                 result.success
-                  ? 'bg-green-50 text-green-700 border border-green-200'
-                  : 'bg-red-50 text-red-700 border border-red-200'
+                  ? "bg-green-50 text-green-700 border border-green-200"
+                  : "bg-red-50 text-red-700 border border-red-200"
               }`}
             >
               {result.success ? (
@@ -101,7 +120,7 @@ export default function SetupPage() {
                 설정 중...
               </>
             ) : (
-              '시트 구조 생성하기'
+              "시트 구조 생성하기"
             )}
           </Button>
 
@@ -109,7 +128,7 @@ export default function SetupPage() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => window.location.href = '/'}
+              onClick={() => (window.location.href = "/")}
             >
               대시보드로 이동
             </Button>

@@ -1,6 +1,7 @@
 # 병원 블로그 자동화 시스템 PRD
 
 ## Product Requirements Document
+
 **버전:** 1.0  
 **작성일:** 2025-01-12  
 **프로젝트명:** Hospital Blog Automation System (HBAS)
@@ -10,14 +11,17 @@
 ## 1. 개요 (Overview)
 
 ### 1.1 배경
+
 병원 마케팅 컨설팅 회사에서 다수의 병원 클라이언트를 대상으로 블로그 콘텐츠를 제작하고 있음. 현재는 Claude 프로젝트 기능을 활용해 수동으로 글을 생성하고 있으나, 매번 대화 시작 → 요청 입력 → 결과물 다운로드의 반복 작업이 발생함.
 
 ### 1.2 목표
+
 - 블로그 글 생성 프로세스의 완전 자동화
 - 요청부터 결과물 저장까지 원클릭 워크플로우 구현
 - 직원들이 쉽게 사용할 수 있는 웹 인터페이스 제공
 
 ### 1.3 성공 지표
+
 - 글 1건당 소요 시간: 기존 15분 → 2분 이내
 - 수동 개입 횟수: 요청 입력 1회로 축소
 - 직원 만족도: 사용성 평가 4.0/5.0 이상
@@ -27,10 +31,12 @@
 ## 2. 사용자 (Users)
 
 ### 2.1 주요 사용자
+
 - **마케팅 담당 직원**: 병원별 블로그 글 요청 및 결과물 확인
 - **팀장/관리자**: 전체 요청 현황 모니터링, 병원 설정 관리
 
 ### 2.2 사용 환경
+
 - 데스크톱 웹 브라우저 (Chrome 권장)
 - 내부 직원만 접근 (외부 병원 담당자 접근 없음)
 
@@ -74,46 +80,47 @@
 
 #### 시트1: `Hospital_Config` (병원 설정)
 
-| 컬럼명 | 타입 | 설명 | 예시 |
-|--------|------|------|------|
-| hospital_id | String | 병원 고유 코드 | H001 |
-| hospital_name | String | 병원명 | 좋은문화병원 림프부종센터 |
-| system_prompt | Text | AI 시스템 프롬프트 (전체 지침) | (긴 텍스트) |
-| reference_folder_id | String | 참고자료 드라이브 폴더 ID | 1a2b3c4d5e |
-| output_folder_id | String | 결과물 저장 드라이브 폴더 ID | 5e4d3c2b1a |
-| slack_channel | String | 알림 받을 슬랙 채널 | #blog-alerts |
-| created_at | DateTime | 생성일 | 2025-01-12 |
-| updated_at | DateTime | 수정일 | 2025-01-12 |
+| 컬럼명              | 타입     | 설명                           | 예시                      |
+| ------------------- | -------- | ------------------------------ | ------------------------- |
+| hospital_id         | String   | 병원 고유 코드                 | H001                      |
+| hospital_name       | String   | 병원명                         | 좋은문화병원 림프부종센터 |
+| system_prompt       | Text     | AI 시스템 프롬프트 (전체 지침) | (긴 텍스트)               |
+| reference_folder_id | String   | 참고자료 드라이브 폴더 ID      | 1a2b3c4d5e                |
+| output_folder_id    | String   | 결과물 저장 드라이브 폴더 ID   | 5e4d3c2b1a                |
+| slack_channel       | String   | 알림 받을 슬랙 채널            | #blog-alerts              |
+| created_at          | DateTime | 생성일                         | 2025-01-12                |
+| updated_at          | DateTime | 수정일                         | 2025-01-12                |
 
 #### 시트2: `Requests` (글 요청)
 
-| 컬럼명 | 타입 | 설명 | 예시 |
-|--------|------|------|------|
-| request_id | String | 요청 고유 ID (자동생성) | R20250112001 |
-| created_at | DateTime | 요청일시 | 2025-01-12 14:30 |
-| hospital_id | String | 병원 코드 (FK) | H001 |
-| target_keyword | String | 타겟 키워드 (SEO) | 유방암수술후부종 |
-| topic_keyword | String | 주제 키워드 | 바이오브릿지 수술 |
-| purpose | Text | 글의 목적 | 유방암 수술 후 림프부종으로... |
-| format_type | String | 글의 구조 (선택형) | 팩트체크형 |
-| format_custom | Text | 글의 구조 (자유입력) | (선택형 외 추가 설명) |
-| status | Enum | 상태 | 대기/생성중/완료/수정요청/수정완료 |
-| result_doc_id | String | 생성된 문서 ID | doc123abc |
-| result_doc_url | URL | 생성된 문서 링크 | https://docs.google.com/... |
-| revision_request | Text | 수정 요청 내용 | 두번째 문단 톤 수정 필요 |
-| revision_count | Number | 수정 횟수 | 1 |
-| completed_at | DateTime | 완료일시 | 2025-01-12 14:35 |
-| created_by | String | 요청자 이메일 | staff@company.com |
+| 컬럼명           | 타입     | 설명                    | 예시                               |
+| ---------------- | -------- | ----------------------- | ---------------------------------- |
+| request_id       | String   | 요청 고유 ID (자동생성) | R20250112001                       |
+| created_at       | DateTime | 요청일시                | 2025-01-12 14:30                   |
+| hospital_id      | String   | 병원 코드 (FK)          | H001                               |
+| target_keyword   | String   | 타겟 키워드 (SEO)       | 유방암수술후부종                   |
+| topic_keyword    | String   | 주제 키워드             | 바이오브릿지 수술                  |
+| purpose          | Text     | 글의 목적               | 유방암 수술 후 림프부종으로...     |
+| format_type      | String   | 글의 구조 (선택형)      | 팩트체크형                         |
+| format_custom    | Text     | 글의 구조 (자유입력)    | (선택형 외 추가 설명)              |
+| status           | Enum     | 상태                    | 대기/생성중/완료/수정요청/수정완료 |
+| result_doc_id    | String   | 생성된 문서 ID          | doc123abc                          |
+| result_doc_url   | URL      | 생성된 문서 링크        | https://docs.google.com/...        |
+| revision_request | Text     | 수정 요청 내용          | 두번째 문단 톤 수정 필요           |
+| revision_count   | Number   | 수정 횟수               | 1                                  |
+| completed_at     | DateTime | 완료일시                | 2025-01-12 14:35                   |
+| created_by       | String   | 요청자 이메일           | staff@company.com                  |
 
 #### 시트3: `Format_Options` (글 구조 선택지)
 
-| 컬럼명 | 타입 | 설명 |
-|--------|------|------|
-| format_id | String | 구조 ID |
-| format_name | String | 구조명 |
-| description | Text | 설명 |
+| 컬럼명      | 타입   | 설명    |
+| ----------- | ------ | ------- |
+| format_id   | String | 구조 ID |
+| format_name | String | 구조명  |
+| description | Text   | 설명    |
 
 **기본 선택지:**
+
 - Q&A형
 - 사례/스토리텔링형
 - 실패분석형
@@ -130,6 +137,7 @@
 ### 5.1 글 요청 (Create Request)
 
 **FR-001: 새 글 요청 생성**
+
 - 사용자가 웹 폼에서 다음 정보 입력:
   - 병원 선택 (드롭다운)
   - 타겟 키워드 (필수)
@@ -140,17 +148,19 @@
 - 상태: "대기"로 설정
 
 **FR-002: 자동 글 생성 트리거**
+
 - 새 요청 감지 시 자동으로 생성 프로세스 시작
 - 또는 "생성 시작" 버튼으로 수동 트리거 가능
 - 상태: "대기" → "생성중"
 
 **FR-003: AI 글 생성**
+
 - 병원 설정에서 system_prompt 조회
 - 참고자료 폴더에서 .md 파일들 읽어오기
 - Anthropic API 호출:
   ```
   System: {system_prompt} + {참고자료 내용}
-  User: 
+  User:
   타겟 키워드: {target_keyword}
   주제 키워드: {topic_keyword}
   글의 목적: {purpose}
@@ -161,6 +171,7 @@
 - 파일명 형식: `[YYYYMMDD] {target_keyword} - {topic_keyword}.md`
 
 **FR-004: 완료 처리**
+
 - 상태: "생성중" → "완료"
 - result_doc_url 컬럼에 문서 링크 저장
 - completed_at 타임스탬프 기록
@@ -169,12 +180,14 @@
 ### 5.2 수정 요청 (Revision Request)
 
 **FR-005: 수정 요청 등록**
+
 - 완료된 글에 대해 수정 요청 입력 가능
 - revision_request 컬럼에 수정 내용 저장
 - 상태: "완료" → "수정요청"
 - revision_count 증가
 
 **FR-006: 수정 글 생성**
+
 - 기존 생성된 글 + 수정 요청 내용을 포함하여 API 재호출
 - 새 버전의 문서 생성 (기존 문서 유지)
 - 상태: "수정요청" → "수정완료"
@@ -183,18 +196,21 @@
 ### 5.3 대시보드 (Dashboard)
 
 **FR-007: 요청 목록 조회**
+
 - 전체 요청 목록 테이블 형태로 표시
 - 필터링: 병원별, 상태별, 날짜별
 - 정렬: 최신순, 병원순
 - 검색: 키워드 검색
 
 **FR-008: 요청 상세 보기**
+
 - 개별 요청 클릭 시 상세 정보 모달/페이지
 - 생성된 문서 미리보기 또는 링크
 - 수정 요청 입력 폼
 - 히스토리 (생성, 수정 이력)
 
 **FR-009: 병원 설정 관리 (관리자)**
+
 - 병원 추가/수정/삭제
 - 시스템 프롬프트 편집
 - 드라이브 폴더 연결
@@ -203,6 +219,7 @@
 ### 5.4 알림 (Notifications)
 
 **FR-010: 슬랙 알림**
+
 - 글 생성 완료 시:
   ```
   ✅ 블로그 글 생성 완료
@@ -230,20 +247,24 @@
 ## 6. 비기능 요구사항 (Non-Functional Requirements)
 
 ### 6.1 성능
+
 - 글 생성 완료까지 최대 3분 이내
 - 동시 요청 처리: 최대 5건
 
 ### 6.2 보안
+
 - Google OAuth 2.0 인증
 - 내부 도메인 계정만 접근 허용
 - API 키는 Google Apps Script 속성에 암호화 저장
 
 ### 6.3 안정성
+
 - API 호출 실패 시 3회 재시도
 - 재시도 실패 시 상태 "에러"로 변경 + 슬랙 알림
 - 일일 요청 한도 모니터링 (Anthropic API)
 
 ### 6.4 확장성
+
 - 새 병원 추가 시 코드 수정 없이 시트에서 설정만 추가
 - 새 글 구조 옵션도 시트에서 관리
 
@@ -252,15 +273,18 @@
 ## 7. 기술 스택 (Tech Stack)
 
 ### 7.1 Frontend
+
 - **Framework**: React + Vite 또는 Next.js
 - **UI Library**: Tailwind CSS + shadcn/ui
 - **Hosting**: Vercel 또는 Google Cloud Run
 
 ### 7.2 Backend
+
 - **Primary**: Google Apps Script (Web App 배포)
 - **Alternative**: Node.js + Express (확장 필요 시)
 
 ### 7.3 External Services
+
 - Google Sheets API
 - Google Drive API
 - Google Docs API
@@ -272,6 +296,7 @@
 ## 8. 화면 설계 (UI/UX Wireframe)
 
 ### 8.1 메인 대시보드
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  🏥 Hospital Blog Automation                    [사용자] [로그아웃] │
@@ -294,6 +319,7 @@
 ```
 
 ### 8.2 새 글 요청 폼
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  📝 새 글 요청                                          [X 닫기] │
@@ -327,6 +353,7 @@
 ```
 
 ### 8.3 요청 상세 / 수정 요청
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  📄 요청 상세                                           [X 닫기] │
@@ -364,18 +391,21 @@
 ## 9. 개발 마일스톤 (Milestones)
 
 ### Phase 1: 기반 구축 (1주)
+
 - [ ] Google Sheets 구조 생성
 - [ ] Google Apps Script 프로젝트 설정
 - [ ] Anthropic API 연동 테스트
 - [ ] 기본 글 생성 로직 구현
 
 ### Phase 2: 핵심 기능 (2주)
+
 - [ ] 참고자료 폴더 읽기 기능
 - [ ] Google Docs 생성 및 드라이브 저장
 - [ ] 슬랙 알림 연동
 - [ ] 수정 요청 처리 로직
 
 ### Phase 3: 웹 프론트엔드 (2주)
+
 - [ ] React 프로젝트 셋업
 - [ ] Google OAuth 로그인
 - [ ] 대시보드 UI
@@ -383,6 +413,7 @@
 - [ ] 상세/수정 모달
 
 ### Phase 4: 테스트 및 배포 (1주)
+
 - [ ] 통합 테스트
 - [ ] 에러 핸들링 보완
 - [ ] 사용자 피드백 반영
@@ -394,13 +425,13 @@
 
 ## 10. 리스크 및 대응 (Risks & Mitigations)
 
-| 리스크 | 영향 | 대응 방안 |
-|--------|------|-----------|
-| Anthropic API 비용 증가 | 중 | 일일 요청 한도 설정, 모니터링 대시보드 |
-| API 호출 실패 | 중 | 3회 재시도 + 에러 알림 + 수동 재시도 버튼 |
-| 긴 글 생성 시 타임아웃 | 중 | Apps Script 실행 제한(6분) 내 처리되도록 프롬프트 최적화 |
-| 참고자료 파일 누락 | 하 | 폴더 검증 로직 + 관리자 알림 |
-| 동시 다발 요청 | 하 | 큐 방식 처리, 순차 실행 |
+| 리스크                  | 영향 | 대응 방안                                                |
+| ----------------------- | ---- | -------------------------------------------------------- |
+| Anthropic API 비용 증가 | 중   | 일일 요청 한도 설정, 모니터링 대시보드                   |
+| API 호출 실패           | 중   | 3회 재시도 + 에러 알림 + 수동 재시도 버튼                |
+| 긴 글 생성 시 타임아웃  | 중   | Apps Script 실행 제한(6분) 내 처리되도록 프롬프트 최적화 |
+| 참고자료 파일 누락      | 하   | 폴더 검증 로직 + 관리자 알림                             |
+| 동시 다발 요청          | 하   | 큐 방식 처리, 순차 실행                                  |
 
 ---
 
@@ -416,6 +447,7 @@
 ## 12. 부록 (Appendix)
 
 ### A. API 명세 (예정)
+
 - `POST /api/requests` - 새 요청 생성
 - `GET /api/requests` - 요청 목록 조회
 - `GET /api/requests/:id` - 요청 상세 조회
@@ -424,9 +456,11 @@
 - `POST /api/hospitals` - 병원 추가 (관리자)
 
 ### B. 슬랙 Webhook 설정 가이드
+
 (배포 시 별도 문서화)
 
 ### C. Google Cloud 프로젝트 설정 가이드
+
 (배포 시 별도 문서화)
 
 ---

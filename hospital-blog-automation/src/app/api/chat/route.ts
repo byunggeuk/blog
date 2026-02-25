@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
-import { getReferenceContents } from '@/lib/google-drive';
+import { NextRequest, NextResponse } from "next/server";
+import Anthropic from "@anthropic-ai/sdk";
+import { getReferenceContents } from "@/lib/google-drive";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -15,7 +15,7 @@ interface ChatRequest {
   formatType: string;
   formatCustom?: string;
   messages: Array<{
-    role: 'user' | 'assistant';
+    role: "user" | "assistant";
     content: string;
   }>;
   isInitialGeneration: boolean;
@@ -56,7 +56,7 @@ const BLOG_SYSTEM_PROMPT = `당신은 병원 블로그 글을 작성하는 전�
 
 ## 형식 규칙
 
-글의 구조는 다음을 따르세요: ##으로 대제목 1개, ###으로 소제목 6개, 소제목 없는 마무리 문단 1개. 대제목은 타겟 키워드를 포함하면서 독자의 관심을 끄는 문장으로 씁니다. 마무리 문단은 세 문장 내외로, 자연스럽게 전문의 상담을 안내하며 마무리합니다.
+글의 구조는 다음을 따르세요: ##으로 대제목 1개, ###으로 소제목 6개, 소제목 없는 마무리 문단 1개. 대제목은 반드시 "타겟 키워드, 나머지 부분" 형태로 작성하세요. 쉼표 앞에 타겟 키워드를 그대로 넣고, 쉼표 뒤에 독자의 관심을 끄는 문장을 씁니다. 예: ## 회전근개파열, 어깨 통증의 원인과 치료법. 마무리 문단은 세 문장 내외로, 자연스럽게 전문의 상담을 안내하며 마무리합니다.
 
 분량은 2000자에서 3000자 사이로 작성하세요.
 
@@ -84,13 +84,13 @@ export async function POST(request: NextRequest) {
 
     if (!process.env.ANTHROPIC_API_KEY) {
       return NextResponse.json(
-        { error: 'ANTHROPIC_API_KEY가 설정되지 않았습니다.' },
-        { status: 500 }
+        { error: "ANTHROPIC_API_KEY가 설정되지 않았습니다." },
+        { status: 500 },
       );
     }
 
     // 참고자료 읽기
-    let referenceSection = '';
+    let referenceSection = "";
     if (referenceFolderId) {
       try {
         const referenceContents = await getReferenceContents(referenceFolderId);
@@ -106,42 +106,47 @@ ${referenceContents}
 위 참고자료는 사실 확인 및 병원 정보 참조용입니다. 참고자료의 내용이 위 핵심 지침과 충돌할 경우, 핵심 지침을 우선하세요.`;
         }
       } catch (error) {
-        console.error('참고자료 읽기 실패:', error);
+        console.error("참고자료 읽기 실패:", error);
       }
     }
 
     // 수정 모드 프롬프트
-    const editModeSection = !isInitialGeneration ? `
+    const editModeSection = !isInitialGeneration
+      ? `
 
 ## 수정 모드 규칙
 지금은 기존 글의 수정 요청입니다. 반드시 다음 규칙을 따르세요:
 1. 사용자가 지적한 부분만 수정하세요
 2. 지적하지 않은 부분은 원문 그대로 유지하세요
 3. 글의 전체 구조, 제목, 소제목을 변경하지 마세요 (사용자가 명시적으로 요청한 경우 제외)
-4. 수정된 글 전체를 출력하되, 변경하지 않은 부분은 원문과 동일해야 합니다` : '';
+4. 수정된 글 전체를 출력하되, 변경하지 않은 부분은 원문과 동일해야 합니다`
+      : "";
 
     const systemPrompt = `${BLOG_SYSTEM_PROMPT}
 
 ## 병원 정보
 - **병원명**: ${hospitalName}
-${hospitalSystemPrompt ? `- **병원별 가이드**: ${hospitalSystemPrompt}` : ''}${referenceSection}
+${hospitalSystemPrompt ? `- **병원별 가이드**: ${hospitalSystemPrompt}` : ""}${referenceSection}
 
 ## 현재 요청 정보
 - **타겟 키워드**: ${targetKeyword}
 - **주제**: ${topicKeyword}
 - **목적**: ${purpose}
-- **글 구조**: ${formatType}${formatCustom ? `\n- **추가 요청**: ${formatCustom}` : ''}${editModeSection}`;
+- **글 구조**: ${formatType}${formatCustom ? `\n- **추가 요청**: ${formatCustom}` : ""}${editModeSection}`;
 
-    const claudeMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+    const claudeMessages: Array<{
+      role: "user" | "assistant";
+      content: string;
+    }> = [];
 
     if (isInitialGeneration) {
       claudeMessages.push({
-        role: 'user',
+        role: "user",
         content: `위 정보를 바탕으로 "${targetKeyword}" 키워드에 대한 ${formatType} 블로그 글을 작성해주세요.
 
 주제: ${topicKeyword}
 목적: ${purpose}
-${formatCustom ? `추가 요청: ${formatCustom}` : ''}
+${formatCustom ? `추가 요청: ${formatCustom}` : ""}
 
 반드시 대제목(##) 1개, 소제목(###) 6개, 소제목 없는 마무리 문단 1개 구조를 지켜주세요. SEO에 최적화된 제목과 함께 완성된 블로그 글을 작성해주세요.`,
       });
@@ -150,7 +155,7 @@ ${formatCustom ? `추가 요청: ${formatCustom}` : ''}
     }
 
     const response = await anthropic.messages.create({
-      model: 'claude-opus-4-5-20251101',
+      model: "claude-opus-4-5-20251101",
       max_tokens: 4096,
       temperature: 0.8,
       system: systemPrompt,
@@ -158,10 +163,10 @@ ${formatCustom ? `추가 요청: ${formatCustom}` : ''}
     });
 
     const assistantMessage = response.content[0];
-    if (assistantMessage.type !== 'text') {
+    if (assistantMessage.type !== "text") {
       return NextResponse.json(
-        { error: '예상치 못한 응답 형식입니다.' },
-        { status: 500 }
+        { error: "예상치 못한 응답 형식입니다." },
+        { status: 500 },
       );
     }
 
@@ -170,18 +175,18 @@ ${formatCustom ? `추가 요청: ${formatCustom}` : ''}
       usage: response.usage,
     });
   } catch (error) {
-    console.error('Claude API Error:', error);
+    console.error("Claude API Error:", error);
 
     if (error instanceof Anthropic.APIError) {
       return NextResponse.json(
         { error: `Claude API 오류: ${error.message}` },
-        { status: error.status || 500 }
+        { status: error.status || 500 },
       );
     }
 
     return NextResponse.json(
-      { error: '글 생성 중 오류가 발생했습니다.' },
-      { status: 500 }
+      { error: "글 생성 중 오류가 발생했습니다." },
+      { status: 500 },
     );
   }
 }

@@ -1,19 +1,27 @@
-import { google } from 'googleapis';
-import { Hospital, BlogRequest, ChatMessage, FormatType, RequestStatus } from '@/types';
+import { google } from "googleapis";
+import {
+  Hospital,
+  BlogRequest,
+  ChatMessage,
+  FormatType,
+  RequestStatus,
+} from "@/types";
 
 // Service Account 인증 설정
 function getAuthClient() {
   const credentials = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 
   if (!credentials) {
-    throw new Error('GOOGLE_SERVICE_ACCOUNT_KEY 환경변수가 설정되지 않았습니다.');
+    throw new Error(
+      "GOOGLE_SERVICE_ACCOUNT_KEY 환경변수가 설정되지 않았습니다.",
+    );
   }
 
   const serviceAccount = JSON.parse(credentials);
 
   const auth = new google.auth.GoogleAuth({
     credentials: serviceAccount,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
 
   return auth;
@@ -23,7 +31,7 @@ function getAuthClient() {
 function getSpreadsheetId() {
   const id = process.env.GOOGLE_SPREADSHEET_ID;
   if (!id) {
-    throw new Error('GOOGLE_SPREADSHEET_ID 환경변수가 설정되지 않았습니다.');
+    throw new Error("GOOGLE_SPREADSHEET_ID 환경변수가 설정되지 않았습니다.");
   }
   return id;
 }
@@ -33,54 +41,54 @@ function getSpreadsheetId() {
 
 export async function getHospitals(): Promise<Hospital[]> {
   const auth = getAuthClient();
-  const sheets = google.sheets({ version: 'v4', auth });
+  const sheets = google.sheets({ version: "v4", auth });
   const spreadsheetId = getSpreadsheetId();
 
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: '병원설정!A2:I100', // 헤더 제외
+    range: "병원설정!A2:I100", // 헤더 제외
   });
 
   const rows = response.data.values || [];
 
   return rows
-    .filter((row) => row[0] && row[0].trim() !== '') // 빈 hospital_id 필터링
+    .filter((row) => row[0] && row[0].trim() !== "") // 빈 hospital_id 필터링
     .map((row) => ({
-      hospital_id: row[0] || '',
-      hospital_name: row[1] || '',
-      blog_url: row[2] || '',
-      reference_folder_id: row[3] || '',
-      output_folder_id: row[4] || '',
-      prompt_name: row[5] || '',
-      system_prompt: row[6] || '',
+      hospital_id: row[0] || "",
+      hospital_name: row[1] || "",
+      blog_url: row[2] || "",
+      reference_folder_id: row[3] || "",
+      output_folder_id: row[4] || "",
+      prompt_name: row[5] || "",
+      system_prompt: row[6] || "",
       created_at: row[7] || new Date().toISOString(),
       // is_active: 명시적으로 FALSE가 아니면 true (빈 값이나 없는 경우도 true)
-      is_active: row[8] !== 'FALSE' && row[8] !== 'false' && row[8] !== '0',
+      is_active: row[8] !== "FALSE" && row[8] !== "false" && row[8] !== "0",
     }));
 }
 
 // 병원 추가
 export async function addHospital(hospital: Hospital): Promise<void> {
   const auth = getAuthClient();
-  const sheets = google.sheets({ version: 'v4', auth });
+  const sheets = google.sheets({ version: "v4", auth });
   const spreadsheetId = getSpreadsheetId();
 
   const row = [
     hospital.hospital_id,
     hospital.hospital_name,
-    hospital.blog_url || '',
-    hospital.reference_folder_id || '',
-    hospital.output_folder_id || '',
-    hospital.prompt_name || '',
+    hospital.blog_url || "",
+    hospital.reference_folder_id || "",
+    hospital.output_folder_id || "",
+    hospital.prompt_name || "",
     hospital.system_prompt,
     hospital.created_at,
-    hospital.is_active ? 'TRUE' : 'FALSE',
+    hospital.is_active ? "TRUE" : "FALSE",
   ];
 
   await sheets.spreadsheets.values.append({
     spreadsheetId,
-    range: '병원설정!A:I',
-    valueInputOption: 'USER_ENTERED',
+    range: "병원설정!A:I",
+    valueInputOption: "USER_ENTERED",
     requestBody: {
       values: [row],
     },
@@ -90,13 +98,13 @@ export async function addHospital(hospital: Hospital): Promise<void> {
 // 병원 업데이트
 export async function updateHospital(hospital: Hospital): Promise<void> {
   const auth = getAuthClient();
-  const sheets = google.sheets({ version: 'v4', auth });
+  const sheets = google.sheets({ version: "v4", auth });
   const spreadsheetId = getSpreadsheetId();
 
   // 해당 hospital_id의 행 번호 찾기
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: '병원설정!A:A',
+    range: "병원설정!A:A",
   });
 
   const rows = response.data.values || [];
@@ -111,19 +119,19 @@ export async function updateHospital(hospital: Hospital): Promise<void> {
   const row = [
     hospital.hospital_id,
     hospital.hospital_name,
-    hospital.blog_url || '',
-    hospital.reference_folder_id || '',
-    hospital.output_folder_id || '',
-    hospital.prompt_name || '',
+    hospital.blog_url || "",
+    hospital.reference_folder_id || "",
+    hospital.output_folder_id || "",
+    hospital.prompt_name || "",
     hospital.system_prompt,
     hospital.created_at,
-    hospital.is_active ? 'TRUE' : 'FALSE',
+    hospital.is_active ? "TRUE" : "FALSE",
   ];
 
   await sheets.spreadsheets.values.update({
     spreadsheetId,
     range: `병원설정!A${rowNumber}:I${rowNumber}`,
-    valueInputOption: 'USER_ENTERED',
+    valueInputOption: "USER_ENTERED",
     requestBody: {
       values: [row],
     },
@@ -133,12 +141,12 @@ export async function updateHospital(hospital: Hospital): Promise<void> {
 // 병원 삭제 (실제로는 is_active를 FALSE로)
 export async function deleteHospital(hospitalId: string): Promise<void> {
   const auth = getAuthClient();
-  const sheets = google.sheets({ version: 'v4', auth });
+  const sheets = google.sheets({ version: "v4", auth });
   const spreadsheetId = getSpreadsheetId();
 
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: '병원설정!A:I',
+    range: "병원설정!A:I",
   });
 
   const rows = response.data.values || [];
@@ -154,9 +162,9 @@ export async function deleteHospital(hospitalId: string): Promise<void> {
   await sheets.spreadsheets.values.update({
     spreadsheetId,
     range: `병원설정!I${rowNumber}`,
-    valueInputOption: 'USER_ENTERED',
+    valueInputOption: "USER_ENTERED",
     requestBody: {
-      values: [['FALSE']],
+      values: [["FALSE"]],
     },
   });
 }
@@ -165,20 +173,20 @@ export async function deleteHospital(hospitalId: string): Promise<void> {
 
 // 유효한 ISO 날짜 문자열인지 확인
 function isValidDateString(dateStr: string): boolean {
-  if (!dateStr || dateStr.trim() === '') return false;
+  if (!dateStr || dateStr.trim() === "") return false;
   const date = new Date(dateStr);
   return !isNaN(date.getTime());
 }
 
 export async function getRequests(): Promise<BlogRequest[]> {
   const auth = getAuthClient();
-  const sheets = google.sheets({ version: 'v4', auth });
+  const sheets = google.sheets({ version: "v4", auth });
   const spreadsheetId = getSpreadsheetId();
 
   // 요청 데이터 가져오기
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: '요청목록!A2:P500', // 헤더 제외
+    range: "요청목록!A2:P500", // 헤더 제외
   });
 
   const rows = response.data.values || [];
@@ -200,26 +208,28 @@ export async function getRequests(): Promise<BlogRequest[]> {
     // completed_at(13), chat_history(14), created_by(15)
 
     // 날짜 값 검증 및 기본값 설정
-    const createdAt = isValidDateString(row[1]) ? row[1] : new Date().toISOString();
+    const createdAt = isValidDateString(row[1])
+      ? row[1]
+      : new Date().toISOString();
     const completedAt = isValidDateString(row[13]) ? row[13] : undefined;
 
     return {
-      request_id: row[0] || '',
+      request_id: row[0] || "",
       created_at: createdAt,
-      hospital_id: row[2] || '',
-      hospital_name: row[3] || '',
-      target_keyword: row[4] || '',
-      topic_keyword: row[5] || '',
-      purpose: row[6] || '',
-      format_type: (row[7] || 'Q&A형') as FormatType,
+      hospital_id: row[2] || "",
+      hospital_name: row[3] || "",
+      target_keyword: row[4] || "",
+      topic_keyword: row[5] || "",
+      purpose: row[6] || "",
+      format_type: (row[7] || "Q&A형") as FormatType,
       format_custom: row[8] || undefined,
-      status: (row[9] || '대기') as RequestStatus,
+      status: (row[9] || "대기") as RequestStatus,
       result_doc_id: row[10] || undefined,
       result_doc_url: row[11] || undefined,
-      revision_count: parseInt(row[12] || '0', 10),
+      revision_count: parseInt(row[12] || "0", 10),
       completed_at: completedAt,
       chat_history: chatHistory,
-      created_by: row[15] || '',
+      created_by: row[15] || "",
     };
   });
 }
@@ -227,7 +237,7 @@ export async function getRequests(): Promise<BlogRequest[]> {
 // 새 요청 추가
 export async function addRequest(request: BlogRequest): Promise<void> {
   const auth = getAuthClient();
-  const sheets = google.sheets({ version: 'v4', auth });
+  const sheets = google.sheets({ version: "v4", auth });
   const spreadsheetId = getSpreadsheetId();
 
   // 컬럼 순서: request_id, created_at, hospital_id, hospital_name, target_keyword, topic_keyword,
@@ -242,20 +252,20 @@ export async function addRequest(request: BlogRequest): Promise<void> {
     request.topic_keyword,
     request.purpose,
     request.format_type,
-    request.format_custom || '',
+    request.format_custom || "",
     request.status,
-    request.result_doc_id || '',
-    request.result_doc_url || '',
+    request.result_doc_id || "",
+    request.result_doc_url || "",
     request.revision_count.toString(),
-    request.completed_at || '',
+    request.completed_at || "",
     JSON.stringify(request.chat_history),
     request.created_by,
   ];
 
   await sheets.spreadsheets.values.append({
     spreadsheetId,
-    range: '요청목록!A:P',
-    valueInputOption: 'USER_ENTERED',
+    range: "요청목록!A:P",
+    valueInputOption: "USER_ENTERED",
     requestBody: {
       values: [row],
     },
@@ -265,13 +275,13 @@ export async function addRequest(request: BlogRequest): Promise<void> {
 // 요청 업데이트
 export async function updateRequest(request: BlogRequest): Promise<void> {
   const auth = getAuthClient();
-  const sheets = google.sheets({ version: 'v4', auth });
+  const sheets = google.sheets({ version: "v4", auth });
   const spreadsheetId = getSpreadsheetId();
 
   // 먼저 해당 request_id의 행 번호 찾기
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: '요청목록!A:A',
+    range: "요청목록!A:A",
   });
 
   const rows = response.data.values || [];
@@ -295,12 +305,12 @@ export async function updateRequest(request: BlogRequest): Promise<void> {
     request.topic_keyword,
     request.purpose,
     request.format_type,
-    request.format_custom || '',
+    request.format_custom || "",
     request.status,
-    request.result_doc_id || '',
-    request.result_doc_url || '',
+    request.result_doc_id || "",
+    request.result_doc_url || "",
     request.revision_count.toString(),
-    request.completed_at || '',
+    request.completed_at || "",
     JSON.stringify(request.chat_history),
     request.created_by,
   ];
@@ -308,7 +318,7 @@ export async function updateRequest(request: BlogRequest): Promise<void> {
   await sheets.spreadsheets.values.update({
     spreadsheetId,
     range: `요청목록!A${rowNumber}:P${rowNumber}`,
-    valueInputOption: 'USER_ENTERED',
+    valueInputOption: "USER_ENTERED",
     requestBody: {
       values: [row],
     },
@@ -324,16 +334,16 @@ export async function updateRequestStatus(
     result_doc_url?: string;
     completed_at?: string;
     chat_history?: ChatMessage[];
-  }
+  },
 ): Promise<void> {
   const auth = getAuthClient();
-  const sheets = google.sheets({ version: 'v4', auth });
+  const sheets = google.sheets({ version: "v4", auth });
   const spreadsheetId = getSpreadsheetId();
 
   // 해당 request_id의 행 번호 찾기
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: '요청목록!A:P',
+    range: "요청목록!A:P",
   });
 
   const rows = response.data.values || [];
@@ -368,7 +378,7 @@ export async function updateRequestStatus(
   await sheets.spreadsheets.values.update({
     spreadsheetId,
     range: `요청목록!A${rowNumber}:P${rowNumber}`,
-    valueInputOption: 'USER_ENTERED',
+    valueInputOption: "USER_ENTERED",
     requestBody: {
       values: [updatedRow],
     },

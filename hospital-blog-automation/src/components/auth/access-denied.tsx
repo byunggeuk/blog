@@ -1,14 +1,20 @@
-'use client';
+"use client";
 
-import { useApp } from '@/lib/store';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, Ban, LogOut, Mail } from 'lucide-react';
+import { useApp } from "@/lib/store";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Clock, Ban, LogOut, Mail } from "lucide-react";
 
 export function AccessDenied() {
   const { authStatus, user, logout } = useApp();
 
-  if (authStatus === 'pending') {
+  if (authStatus === "pending") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-100 p-4">
         <Card className="w-full max-w-md">
@@ -24,7 +30,8 @@ export function AccessDenied() {
           <CardContent className="space-y-4">
             <div className="rounded-lg bg-amber-50 p-4 text-center">
               <p className="text-sm text-amber-800">
-                <strong>{user?.name || user?.email}</strong>님의 가입 신청이 접수되었습니다.
+                <strong>{user?.name || user?.email}</strong>님의 가입 신청이
+                접수되었습니다.
               </p>
               <p className="mt-2 text-sm text-amber-700">
                 관리자가 승인하면 서비스를 이용하실 수 있습니다.
@@ -49,7 +56,7 @@ export function AccessDenied() {
     );
   }
 
-  if (authStatus === 'blocked') {
+  if (authStatus === "blocked") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-rose-100 p-4">
         <Card className="w-full max-w-md">
@@ -65,7 +72,8 @@ export function AccessDenied() {
           <CardContent className="space-y-4">
             <div className="rounded-lg bg-red-50 p-4 text-center">
               <p className="text-sm text-red-800">
-                <strong>{user?.name || user?.email}</strong>님의 계정이 차단되었습니다.
+                <strong>{user?.name || user?.email}</strong>님의 계정이
+                차단되었습니다.
               </p>
               <p className="mt-2 text-sm text-red-700">
                 자세한 내용은 관리자에게 문의해 주세요.

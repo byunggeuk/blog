@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useApp } from '@/lib/store';
-import { formatOptions } from '@/lib/mock-data';
-import { NewRequestFormData, FormatType } from '@/types';
-import { Button } from '@/components/ui/button';
+import { useState } from "react";
+import { useApp } from "@/lib/store";
+import { formatOptions } from "@/lib/mock-data";
+import { NewRequestFormData, FormatType } from "@/types";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,18 +12,18 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Loader2, Sparkles } from 'lucide-react';
+} from "@/components/ui/select";
+import { Loader2, Sparkles } from "lucide-react";
 
 interface NewRequestModalProps {
   open: boolean;
@@ -32,16 +32,16 @@ interface NewRequestModalProps {
 
 export function NewRequestModal({ open, onOpenChange }: NewRequestModalProps) {
   const { createRequest, hospitals } = useApp();
-  const activeHospitals = hospitals.filter(h => h.is_active !== false);
+  const activeHospitals = hospitals.filter((h) => h.is_active !== false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCustomFormat, setShowCustomFormat] = useState(false);
   const [formData, setFormData] = useState<NewRequestFormData>({
-    hospital_id: '',
-    target_keyword: '',
-    topic_keyword: '',
-    purpose: '',
-    format_type: 'Q&A형',
-    format_custom: '',
+    hospital_id: "",
+    target_keyword: "",
+    topic_keyword: "",
+    purpose: "",
+    format_type: "Q&A형",
+    format_custom: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -53,7 +53,7 @@ export function NewRequestModal({ open, onOpenChange }: NewRequestModalProps) {
       onOpenChange(false);
       resetForm();
     } catch (error) {
-      console.error('Failed to create request:', error);
+      console.error("Failed to create request:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -61,19 +61,19 @@ export function NewRequestModal({ open, onOpenChange }: NewRequestModalProps) {
 
   const resetForm = () => {
     setFormData({
-      hospital_id: '',
-      target_keyword: '',
-      topic_keyword: '',
-      purpose: '',
-      format_type: 'Q&A형',
-      format_custom: '',
+      hospital_id: "",
+      target_keyword: "",
+      topic_keyword: "",
+      purpose: "",
+      format_type: "Q&A형",
+      format_custom: "",
     });
     setShowCustomFormat(false);
   };
 
   const handleFormatChange = (value: FormatType) => {
     setFormData({ ...formData, format_type: value });
-    setShowCustomFormat(value === '기타');
+    setShowCustomFormat(value === "기타");
   };
 
   const isValid =
@@ -82,15 +82,14 @@ export function NewRequestModal({ open, onOpenChange }: NewRequestModalProps) {
     formData.topic_keyword &&
     formData.purpose &&
     formData.format_type &&
-    (formData.format_type !== '기타' || formData.format_custom);
+    (formData.format_type !== "기타" || formData.format_custom);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            새 글 요청
+            <Sparkles className="h-5 w-5 text-primary" />새 글 요청
           </DialogTitle>
           <DialogDescription>
             블로그 글 생성에 필요한 정보를 입력해주세요.
@@ -194,9 +193,12 @@ export function NewRequestModal({ open, onOpenChange }: NewRequestModalProps) {
                   ))}
                 </SelectContent>
               </Select>
-              {formData.format_type && formData.format_type !== '기타' && (
+              {formData.format_type && formData.format_type !== "기타" && (
                 <p className="text-xs text-muted-foreground">
-                  {formatOptions.find((o) => o.value === formData.format_type)?.description}
+                  {
+                    formatOptions.find((o) => o.value === formData.format_type)
+                      ?.description
+                  }
                 </p>
               )}
             </div>
@@ -235,8 +237,7 @@ export function NewRequestModal({ open, onOpenChange }: NewRequestModalProps) {
                 </>
               ) : (
                 <>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  글 생성 요청
+                  <Sparkles className="mr-2 h-4 w-4" />글 생성 요청
                 </>
               )}
             </Button>

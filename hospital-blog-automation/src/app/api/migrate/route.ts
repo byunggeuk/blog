@@ -1,45 +1,63 @@
-import { NextResponse } from 'next/server';
-import { google } from 'googleapis';
+import { NextResponse } from "next/server";
+import { google } from "googleapis";
 
 function getAuthClient() {
-  const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY || '{}');
+  const credentials = JSON.parse(
+    process.env.GOOGLE_SERVICE_ACCOUNT_KEY || "{}",
+  );
   return new google.auth.GoogleAuth({
     credentials,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
 }
 
 function getSpreadsheetId() {
-  return process.env.GOOGLE_SPREADSHEET_ID || '';
+  return process.env.GOOGLE_SPREADSHEET_ID || "";
 }
 
 // PATCH: 사용자 시트 데이터 수정
 export async function PATCH() {
   try {
-    if (!process.env.GOOGLE_SERVICE_ACCOUNT_KEY || !process.env.GOOGLE_USERS_SPREADSHEET_ID) {
+    if (
+      !process.env.GOOGLE_SERVICE_ACCOUNT_KEY ||
+      !process.env.GOOGLE_USERS_SPREADSHEET_ID
+    ) {
       return NextResponse.json(
-        { error: 'Google Sheets 환경변수가 설정되지 않았습니다.' },
-        { status: 400 }
+        { error: "Google Sheets 환경변수가 설정되지 않았습니다." },
+        { status: 400 },
       );
     }
 
     const auth = getAuthClient();
-    const sheets = google.sheets({ version: 'v4', auth });
+    const sheets = google.sheets({ version: "v4", auth });
     const spreadsheetId = process.env.GOOGLE_USERS_SPREADSHEET_ID;
 
     // 현재 사용자 데이터 가져오기
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: '사용자!A:I',
+      range: "사용자!A:I",
     });
 
     const rows = response.data.values || [];
     if (rows.length <= 1) {
-      return NextResponse.json({ message: '수정할 데이터가 없습니다.', fixed: 0 });
+      return NextResponse.json({
+        message: "수정할 데이터가 없습니다.",
+        fixed: 0,
+      });
     }
 
     // 올바른 헤더
-    const correctHeader = ['id', 'email', 'name', 'role', 'status', 'slack_member_id', 'created_at', 'approved_at', 'blocked_at'];
+    const correctHeader = [
+      "id",
+      "email",
+      "name",
+      "role",
+      "status",
+      "slack_member_id",
+      "created_at",
+      "approved_at",
+      "blocked_at",
+    ];
 
     // 데이터 수정
     let fixedCount = 0;
@@ -49,29 +67,34 @@ export async function PATCH() {
       }
 
       // created_at 필드(인덱스 6)가 비어있고 slack_member_id(인덱스 5)에 날짜가 있는 경우 수정
-      const slackIdValue = row[5] || '';
-      const createdAtValue = row[6] || '';
+      const slackIdValue = row[5] || "";
+      const createdAtValue = row[6] || "";
 
       // slack_member_id에 날짜 형식이 들어가 있으면 데이터가 밀린 것
-      if (slackIdValue && slackIdValue.includes('T') && slackIdValue.includes('Z') && !createdAtValue) {
+      if (
+        slackIdValue &&
+        slackIdValue.includes("T") &&
+        slackIdValue.includes("Z") &&
+        !createdAtValue
+      ) {
         // 데이터 재배치: slack_member_id 위치의 값을 created_at으로 이동
         fixedCount++;
         return [
-          row[0] || '',   // id
-          row[1] || '',   // email
-          row[2] || '',   // name
-          row[3] || '',   // role
-          row[4] || '',   // status
-          '',             // slack_member_id (비움)
-          slackIdValue,   // created_at ← slack_member_id 위치에 있던 날짜값
-          row[7] || '',   // approved_at
-          row[8] || '',   // blocked_at
+          row[0] || "", // id
+          row[1] || "", // email
+          row[2] || "", // name
+          row[3] || "", // role
+          row[4] || "", // status
+          "", // slack_member_id (비움)
+          slackIdValue, // created_at ← slack_member_id 위치에 있던 날짜값
+          row[7] || "", // approved_at
+          row[8] || "", // blocked_at
         ];
       }
 
       // 정상 데이터는 그대로
       const newRow = [...row];
-      while (newRow.length < 9) newRow.push('');
+      while (newRow.length < 9) newRow.push("");
       return newRow;
     });
 
@@ -79,20 +102,25 @@ export async function PATCH() {
     await sheets.spreadsheets.values.update({
       spreadsheetId,
       range: `사용자!A1:I${fixedRows.length}`,
-      valueInputOption: 'RAW',
+      valueInputOption: "RAW",
       requestBody: { values: fixedRows },
     });
 
     return NextResponse.json({
       success: true,
-      message: '사용자 시트 데이터 수정 완료',
+      message: "사용자 시트 데이터 수정 완료",
       fixed: fixedCount,
     });
   } catch (error) {
-    console.error('Fix Users Sheet Error:', error);
+    console.error("Fix Users Sheet Error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : '수정 중 오류가 발생했습니다.' },
-      { status: 500 }
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "수정 중 오류가 발생했습니다.",
+      },
+      { status: 500 },
     );
   }
 }
@@ -101,28 +129,34 @@ export async function PATCH() {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const defaultEmail = body.email || 'byunggeuk.son@philomedi.com';
+    const defaultEmail = body.email || "byunggeuk.son@philomedi.com";
 
-    if (!process.env.GOOGLE_SERVICE_ACCOUNT_KEY || !process.env.GOOGLE_SPREADSHEET_ID) {
+    if (
+      !process.env.GOOGLE_SERVICE_ACCOUNT_KEY ||
+      !process.env.GOOGLE_SPREADSHEET_ID
+    ) {
       return NextResponse.json(
-        { error: 'Google Sheets 환경변수가 설정되지 않았습니다.' },
-        { status: 400 }
+        { error: "Google Sheets 환경변수가 설정되지 않았습니다." },
+        { status: 400 },
       );
     }
 
     const auth = getAuthClient();
-    const sheets = google.sheets({ version: 'v4', auth });
+    const sheets = google.sheets({ version: "v4", auth });
     const spreadsheetId = getSpreadsheetId();
 
     // 현재 데이터 가져오기
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: '요청목록!A:P',
+      range: "요청목록!A:P",
     });
 
     const rows = response.data.values || [];
     if (rows.length <= 1) {
-      return NextResponse.json({ message: '업데이트할 데이터가 없습니다.', updated: 0 });
+      return NextResponse.json({
+        message: "업데이트할 데이터가 없습니다.",
+        updated: 0,
+      });
     }
 
     // created_by가 비어있는 행만 업데이트
@@ -131,9 +165,9 @@ export async function PUT(request: Request) {
       if (index === 0) return row; // 헤더 건너뛰기
 
       // created_by (16번째 컬럼, 인덱스 15)가 비어있으면 기본값 설정
-      if (!row[15] || row[15] === '') {
+      if (!row[15] || row[15] === "") {
         const newRow = [...row];
-        while (newRow.length < 16) newRow.push(''); // 컬럼 수 맞추기
+        while (newRow.length < 16) newRow.push(""); // 컬럼 수 맞추기
         newRow[15] = defaultEmail;
         updatedCount++;
         return newRow;
@@ -145,7 +179,7 @@ export async function PUT(request: Request) {
     await sheets.spreadsheets.values.update({
       spreadsheetId,
       range: `요청목록!A1:P${updatedRows.length}`,
-      valueInputOption: 'RAW',
+      valueInputOption: "RAW",
       requestBody: { values: updatedRows },
     });
 
@@ -156,10 +190,15 @@ export async function PUT(request: Request) {
       email: defaultEmail,
     });
   } catch (error) {
-    console.error('Update created_by Error:', error);
+    console.error("Update created_by Error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : '업데이트 중 오류가 발생했습니다.' },
-      { status: 500 }
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "업데이트 중 오류가 발생했습니다.",
+      },
+      { status: 500 },
     );
   }
 }
@@ -167,35 +206,50 @@ export async function PUT(request: Request) {
 // POST: 시트 컬럼 순서 수정 및 format_type 드롭다운 추가
 export async function POST() {
   try {
-    if (!process.env.GOOGLE_SERVICE_ACCOUNT_KEY || !process.env.GOOGLE_SPREADSHEET_ID) {
+    if (
+      !process.env.GOOGLE_SERVICE_ACCOUNT_KEY ||
+      !process.env.GOOGLE_SPREADSHEET_ID
+    ) {
       return NextResponse.json(
-        { error: 'Google Sheets 환경변수가 설정되지 않았습니다.' },
-        { status: 400 }
+        { error: "Google Sheets 환경변수가 설정되지 않았습니다." },
+        { status: 400 },
       );
     }
 
     const auth = getAuthClient();
-    const sheets = google.sheets({ version: 'v4', auth });
+    const sheets = google.sheets({ version: "v4", auth });
     const spreadsheetId = getSpreadsheetId();
 
     // 1. 현재 요청목록 데이터 가져오기
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: '요청목록!A:P',
+      range: "요청목록!A:P",
     });
 
     const rows = response.data.values || [];
 
     if (rows.length === 0) {
-      return NextResponse.json({ message: '데이터가 없습니다.', migrated: 0 });
+      return NextResponse.json({ message: "데이터가 없습니다.", migrated: 0 });
     }
 
     // 올바른 헤더 순서 (현재 시트와 일치)
     const correctHeader = [
-      'request_id', 'created_at', 'hospital_id', 'hospital_name',
-      'target_keyword', 'topic_keyword', 'purpose', 'format_type',
-      'format_custom', 'status', 'result_doc_id', 'result_doc_url',
-      'revision_count', 'completed_at', 'chat_history', 'created_by'
+      "request_id",
+      "created_at",
+      "hospital_id",
+      "hospital_name",
+      "target_keyword",
+      "topic_keyword",
+      "purpose",
+      "format_type",
+      "format_custom",
+      "status",
+      "result_doc_id",
+      "result_doc_url",
+      "revision_count",
+      "completed_at",
+      "chat_history",
+      "created_by",
     ];
 
     // 컬럼 순서:
@@ -215,7 +269,7 @@ export async function POST() {
 
       // 데이터 행은 그대로 유지 (컬럼 수만 맞춤)
       const newRow = [...row];
-      while (newRow.length < 16) newRow.push('');
+      while (newRow.length < 16) newRow.push("");
       return newRow;
     });
 
@@ -223,7 +277,7 @@ export async function POST() {
     await sheets.spreadsheets.values.update({
       spreadsheetId,
       range: `요청목록!A1:P${migratedRows.length}`,
-      valueInputOption: 'RAW',
+      valueInputOption: "RAW",
       requestBody: {
         values: migratedRows,
       },
@@ -231,20 +285,22 @@ export async function POST() {
 
     // 3. format_type 컬럼에 드롭다운 추가 (H열)
     const sheetInfo = await sheets.spreadsheets.get({ spreadsheetId });
-    const requestSheet = sheetInfo.data.sheets?.find(s => s.properties?.title === '요청목록');
+    const requestSheet = sheetInfo.data.sheets?.find(
+      (s) => s.properties?.title === "요청목록",
+    );
     const sheetId = requestSheet?.properties?.sheetId;
 
     if (sheetId !== undefined) {
       // format_type 드롭다운 옵션
       const formatTypes = [
-        'Q&A형',
-        '사례/스토리텔링형',
-        '실패분석형',
-        '치료과정 시뮬레이션형',
-        '비교분석형',
-        '팩트체크형',
-        '칼럼형',
-        '기타'
+        "Q&A형",
+        "사례/스토리텔링형",
+        "실패분석형",
+        "치료과정 시뮬레이션형",
+        "비교분석형",
+        "팩트체크형",
+        "칼럼형",
+        "기타",
       ];
 
       await sheets.spreadsheets.batchUpdate({
@@ -262,8 +318,8 @@ export async function POST() {
                 },
                 rule: {
                   condition: {
-                    type: 'ONE_OF_LIST',
-                    values: formatTypes.map(t => ({ userEnteredValue: t })),
+                    type: "ONE_OF_LIST",
+                    values: formatTypes.map((t) => ({ userEnteredValue: t })),
                   },
                   showCustomUi: true,
                   strict: false, // 다른 값도 허용 (기타 용도)
@@ -282,14 +338,14 @@ export async function POST() {
                 },
                 rule: {
                   condition: {
-                    type: 'ONE_OF_LIST',
+                    type: "ONE_OF_LIST",
                     values: [
-                      { userEnteredValue: '대기' },
-                      { userEnteredValue: '생성중' },
-                      { userEnteredValue: '완료' },
-                      { userEnteredValue: '수정요청' },
-                      { userEnteredValue: '수정완료' },
-                      { userEnteredValue: '에러' },
+                      { userEnteredValue: "대기" },
+                      { userEnteredValue: "생성중" },
+                      { userEnteredValue: "완료" },
+                      { userEnteredValue: "수정요청" },
+                      { userEnteredValue: "수정완료" },
+                      { userEnteredValue: "에러" },
                     ],
                   },
                   showCustomUi: true,
@@ -304,16 +360,21 @@ export async function POST() {
 
     return NextResponse.json({
       success: true,
-      message: '마이그레이션 완료',
+      message: "마이그레이션 완료",
       migrated: migratedRows.length - 1, // 헤더 제외
       newHeader: correctHeader,
-      dropdowns: ['format_type (H열)', 'status (J열)'],
+      dropdowns: ["format_type (H열)", "status (J열)"],
     });
   } catch (error) {
-    console.error('Migration Error:', error);
+    console.error("Migration Error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : '마이그레이션 중 오류가 발생했습니다.' },
-      { status: 500 }
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "마이그레이션 중 오류가 발생했습니다.",
+      },
+      { status: 500 },
     );
   }
 }

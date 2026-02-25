@@ -1,20 +1,20 @@
-'use client';
+"use client";
 
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { useApp } from '@/lib/store';
-import { BlogRequest, RequestStatus, FormatType } from '@/types';
-import { NewRequestModal } from '@/components/requests/new-request-modal';
-import { RequestChatModal } from '@/components/requests/request-chat-modal';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { useState, useMemo, useEffect, useRef } from "react";
+import { useApp } from "@/lib/store";
+import { BlogRequest, RequestStatus, FormatType } from "@/types";
+import { NewRequestModal } from "@/components/requests/new-request-modal";
+import { RequestChatModal } from "@/components/requests/request-chat-modal";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -22,9 +22,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Plus,
   Search,
@@ -39,80 +39,159 @@ import {
   ArrowDown,
   Archive,
   Undo2,
-} from 'lucide-react';
-import { format, isValid, Locale } from 'date-fns';
+  Trash2,
+} from "lucide-react";
+import { format, isValid, Locale } from "date-fns";
 
 // 안전하게 날짜 포맷팅 (유효하지 않은 날짜는 '-' 반환)
-function safeFormatDate(dateStr: string | undefined, formatStr: string, options?: { locale?: Locale }): string {
-  if (!dateStr) return '-';
+function safeFormatDate(
+  dateStr: string | undefined,
+  formatStr: string,
+  options?: { locale?: Locale },
+): string {
+  if (!dateStr) return "-";
   const date = new Date(dateStr);
-  if (!isValid(date)) return '-';
+  if (!isValid(date)) return "-";
   try {
     return format(date, formatStr, options);
   } catch {
-    return '-';
+    return "-";
   }
 }
-import { ko } from 'date-fns/locale';
+import { ko } from "date-fns/locale";
 
 const statusConfig: Record<
   RequestStatus,
-  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ReactNode }
+  {
+    label: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+    icon: React.ReactNode;
+  }
 > = {
-  대기: { label: '대기', variant: 'outline', icon: <Clock className="h-3 w-3" /> },
-  생성중: { label: '생성중', variant: 'secondary', icon: <Loader2 className="h-3 w-3 animate-spin" /> },
-  완료: { label: '완료', variant: 'default', icon: <CheckCircle2 className="h-3 w-3" /> },
-  수정요청: { label: '수정요청', variant: 'secondary', icon: <RefreshCw className="h-3 w-3" /> },
-  수정완료: { label: '수정완료', variant: 'default', icon: <CheckCircle2 className="h-3 w-3" /> },
-  에러: { label: '에러', variant: 'destructive', icon: <AlertCircle className="h-3 w-3" /> },
-  업로드완료: { label: '업로드완료', variant: 'outline', icon: <Archive className="h-3 w-3" /> },
+  대기: {
+    label: "대기",
+    variant: "outline",
+    icon: <Clock className="h-3 w-3" />,
+  },
+  생성중: {
+    label: "생성중",
+    variant: "secondary",
+    icon: <Loader2 className="h-3 w-3 animate-spin" />,
+  },
+  완료: {
+    label: "완료",
+    variant: "default",
+    icon: <CheckCircle2 className="h-3 w-3" />,
+  },
+  수정요청: {
+    label: "수정요청",
+    variant: "secondary",
+    icon: <RefreshCw className="h-3 w-3" />,
+  },
+  수정완료: {
+    label: "수정완료",
+    variant: "default",
+    icon: <CheckCircle2 className="h-3 w-3" />,
+  },
+  에러: {
+    label: "에러",
+    variant: "destructive",
+    icon: <AlertCircle className="h-3 w-3" />,
+  },
+  업로드완료: {
+    label: "업로드완료",
+    variant: "outline",
+    icon: <Archive className="h-3 w-3" />,
+  },
+  폐기: {
+    label: "폐기",
+    variant: "destructive",
+    icon: <Trash2 className="h-3 w-3" />,
+  },
 };
 
-type DateFilter = 'all' | '7days' | '30days' | 'today';
+type DateFilter = "all" | "7days" | "30days" | "today";
 
-type SortField = 'request_id' | 'target_keyword' | 'topic_keyword' | 'purpose' | 'status' | 'created_at';
-type SortDirection = 'asc' | 'desc';
+type SortField =
+  | "request_id"
+  | "target_keyword"
+  | "topic_keyword"
+  | "purpose"
+  | "status"
+  | "created_at";
+type SortDirection = "asc" | "desc";
 
-const ACTIVE_STATUSES: RequestStatus[] = ['대기', '생성중', '완료', '수정요청', '수정완료', '에러'];
+const ACTIVE_STATUSES: RequestStatus[] = [
+  "대기",
+  "생성중",
+  "완료",
+  "수정요청",
+  "수정완료",
+  "에러",
+];
 
 export function DashboardContent() {
-  const { requests, hospitals, isLoading, refreshRequests, archiveRequest, restoreRequest } = useApp();
+  const {
+    requests,
+    hospitals,
+    isLoading,
+    refreshRequests,
+    archiveRequest,
+    restoreRequest,
+    discardRequest,
+  } = useApp();
   const [showNewRequestModal, setShowNewRequestModal] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<BlogRequest | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<BlogRequest | null>(
+    null,
+  );
   const [showDetailModal, setShowDetailModal] = useState(false);
 
   // Filters
-  const [searchQuery, setSearchQuery] = useState('');
-  const [hospitalFilter, setHospitalFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [formatFilter, setFormatFilter] = useState<string>('all');
-  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [hospitalFilter, setHospitalFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [formatFilter, setFormatFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
 
   // Sorting
-  const [sortField, setSortField] = useState<SortField>('created_at');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [sortField, setSortField] = useState<SortField>("created_at");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   // Tab
-  const [activeTab, setActiveTab] = useState<string>('active');
+  const [activeTab, setActiveTab] = useState<string>("active");
 
   // Stats
   const stats = useMemo(() => {
-    const activeRequests = requests.filter((r) => r.status !== '업로드완료');
+    const activeRequests = requests.filter(
+      (r) => r.status !== "업로드완료" && r.status !== "폐기",
+    );
     const total = activeRequests.length;
     const completed = activeRequests.filter(
-      (r) => r.status === '완료' || r.status === '수정완료'
+      (r) => r.status === "완료" || r.status === "수정완료",
     ).length;
     const inProgress = activeRequests.filter(
-      (r) => r.status === '생성중' || r.status === '수정요청'
+      (r) => r.status === "생성중" || r.status === "수정요청",
     ).length;
-    const pending = activeRequests.filter((r) => r.status === '대기').length;
+    const pending = activeRequests.filter((r) => r.status === "대기").length;
 
     return { total, completed, inProgress, pending };
   }, [requests]);
 
   // Counts for tabs
-  const activeCount = useMemo(() => requests.filter((r) => r.status !== '업로드완료').length, [requests]);
-  const archiveCount = useMemo(() => requests.filter((r) => r.status === '업로드완료').length, [requests]);
+  const activeCount = useMemo(
+    () =>
+      requests.filter((r) => r.status !== "업로드완료" && r.status !== "폐기")
+        .length,
+    [requests],
+  );
+  const archiveCount = useMemo(
+    () => requests.filter((r) => r.status === "업로드완료").length,
+    [requests],
+  );
+  const discardCount = useMemo(
+    () => requests.filter((r) => r.status === "폐기").length,
+    [requests],
+  );
 
   // Unique format types from requests
   const formatTypes = useMemo(() => {
@@ -128,12 +207,12 @@ export function DashboardContent() {
     const processPendingRequests = async () => {
       if (isProcessingRef.current) return;
 
-      const hasPending = requests.some(r => r.status === '대기');
+      const hasPending = requests.some((r) => r.status === "대기");
       if (!hasPending) return;
 
       isProcessingRef.current = true;
       try {
-        const response = await fetch('/api/process', { method: 'POST' });
+        const response = await fetch("/api/process", { method: "POST" });
         if (response.ok) {
           const result = await response.json();
           if (result.processed > 0) {
@@ -141,7 +220,7 @@ export function DashboardContent() {
           }
         }
       } catch (error) {
-        console.error('Auto-process error:', error);
+        console.error("Auto-process error:", error);
       } finally {
         isProcessingRef.current = false;
       }
@@ -155,30 +234,37 @@ export function DashboardContent() {
   // Sort handler
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
   const getSortIcon = (field: SortField) => {
-    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />;
-    return sortDirection === 'asc'
-      ? <ArrowUp className="h-3 w-3 ml-1" />
-      : <ArrowDown className="h-3 w-3 ml-1" />;
+    if (sortField !== field)
+      return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />;
+    return sortDirection === "asc" ? (
+      <ArrowUp className="h-3 w-3 ml-1" />
+    ) : (
+      <ArrowDown className="h-3 w-3 ml-1" />
+    );
   };
 
   // Filtered & sorted requests
   const filteredRequests = useMemo(() => {
-    const isArchiveTab = activeTab === 'archive';
+    const isArchiveTab = activeTab === "archive";
+    const isDiscardTab = activeTab === "discard";
 
     let filtered = requests.filter((request) => {
-      // Tab filter: active vs archive
-      if (isArchiveTab) {
-        if (request.status !== '업로드완료') return false;
+      // Tab filter: active vs archive vs discard
+      if (isDiscardTab) {
+        if (request.status !== "폐기") return false;
+      } else if (isArchiveTab) {
+        if (request.status !== "업로드완료") return false;
       } else {
-        if (request.status === '업로드완료') return false;
+        if (request.status === "업로드완료" || request.status === "폐기")
+          return false;
       }
 
       // Search filter
@@ -193,36 +279,44 @@ export function DashboardContent() {
       }
 
       // Hospital filter
-      if (hospitalFilter !== 'all' && request.hospital_id !== hospitalFilter) {
+      if (hospitalFilter !== "all" && request.hospital_id !== hospitalFilter) {
         return false;
       }
 
       // Format filter
-      if (formatFilter !== 'all' && request.format_type !== formatFilter) {
+      if (formatFilter !== "all" && request.format_type !== formatFilter) {
         return false;
       }
 
       // Status filter (only for active tab)
-      if (!isArchiveTab && statusFilter !== 'all' && request.status !== statusFilter) {
+      if (
+        !isArchiveTab &&
+        statusFilter !== "all" &&
+        request.status !== statusFilter
+      ) {
         return false;
       }
 
       // Date filter
-      if (dateFilter !== 'all') {
+      if (dateFilter !== "all") {
         const requestDate = new Date(request.created_at);
         // 유효하지 않은 날짜는 필터링하지 않음 (모두 포함)
         if (!isValid(requestDate)) return true;
 
         const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const today = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+        );
 
-        if (dateFilter === 'today') {
+        if (dateFilter === "today") {
           if (requestDate < today) return false;
-        } else if (dateFilter === '7days') {
+        } else if (dateFilter === "7days") {
           const weekAgo = new Date(today);
           weekAgo.setDate(weekAgo.getDate() - 7);
           if (requestDate < weekAgo) return false;
-        } else if (dateFilter === '30days') {
+        } else if (dateFilter === "30days") {
           const monthAgo = new Date(today);
           monthAgo.setDate(monthAgo.getDate() - 30);
           if (requestDate < monthAgo) return false;
@@ -238,27 +332,27 @@ export function DashboardContent() {
       let bVal: string;
 
       switch (sortField) {
-        case 'request_id':
+        case "request_id":
           aVal = a.request_id;
           bVal = b.request_id;
           break;
-        case 'target_keyword':
+        case "target_keyword":
           aVal = a.target_keyword;
           bVal = b.target_keyword;
           break;
-        case 'topic_keyword':
+        case "topic_keyword":
           aVal = a.topic_keyword;
           bVal = b.topic_keyword;
           break;
-        case 'purpose':
+        case "purpose":
           aVal = a.purpose;
           bVal = b.purpose;
           break;
-        case 'status':
+        case "status":
           aVal = a.status;
           bVal = b.status;
           break;
-        case 'created_at':
+        case "created_at":
           aVal = a.created_at;
           bVal = b.created_at;
           break;
@@ -268,11 +362,21 @@ export function DashboardContent() {
       }
 
       const cmp = aVal.localeCompare(bVal);
-      return sortDirection === 'asc' ? cmp : -cmp;
+      return sortDirection === "asc" ? cmp : -cmp;
     });
 
     return filtered;
-  }, [requests, activeTab, searchQuery, hospitalFilter, formatFilter, statusFilter, dateFilter, sortField, sortDirection]);
+  }, [
+    requests,
+    activeTab,
+    searchQuery,
+    hospitalFilter,
+    formatFilter,
+    statusFilter,
+    dateFilter,
+    sortField,
+    sortDirection,
+  ]);
 
   const handleRowClick = (request: BlogRequest) => {
     setSelectedRequest(request);
@@ -289,9 +393,22 @@ export function DashboardContent() {
     await restoreRequest(requestId);
   };
 
-  const SortableHeader = ({ field, children, className }: { field: SortField; children: React.ReactNode; className?: string }) => (
+  const handleDiscard = async (e: React.MouseEvent, requestId: string) => {
+    e.stopPropagation();
+    await discardRequest(requestId);
+  };
+
+  const SortableHeader = ({
+    field,
+    children,
+    className,
+  }: {
+    field: SortField;
+    children: React.ReactNode;
+    className?: string;
+  }) => (
     <TableHead
-      className={`cursor-pointer select-none hover:bg-muted/50 ${className || ''}`}
+      className={`cursor-pointer select-none hover:bg-muted/50 ${className || ""}`}
       onClick={() => handleSort(field)}
     >
       <div className="flex items-center">
@@ -308,26 +425,47 @@ export function DashboardContent() {
           <Table>
             <TableHeader>
               <TableRow>
-                <SortableHeader field="request_id" className="w-[120px]">ID</SortableHeader>
+                <SortableHeader field="request_id" className="w-[120px]">
+                  ID
+                </SortableHeader>
                 <TableHead>병원</TableHead>
-                <SortableHeader field="target_keyword">타겟 키워드</SortableHeader>
-                <SortableHeader field="topic_keyword">주제 키워드</SortableHeader>
+                <SortableHeader field="target_keyword">
+                  타겟 키워드
+                </SortableHeader>
+                <SortableHeader field="topic_keyword">
+                  주제 키워드
+                </SortableHeader>
                 <TableHead className="w-[100px] text-center">구조</TableHead>
-                <SortableHeader field="purpose" className="min-w-[200px]">목적</SortableHeader>
-                <SortableHeader field="status" className="w-[100px]">상태</SortableHeader>
-                <SortableHeader field="created_at" className="w-[100px]">날짜</SortableHeader>
+                <SortableHeader field="purpose" className="min-w-[200px]">
+                  목적
+                </SortableHeader>
+                <SortableHeader field="status" className="w-[100px]">
+                  상태
+                </SortableHeader>
+                <SortableHeader field="created_at" className="w-[100px]">
+                  날짜
+                </SortableHeader>
                 <TableHead className="w-[100px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredRequests.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
-                    {activeTab === 'archive'
-                      ? '아카이브된 요청이 없습니다.'
-                      : searchQuery || hospitalFilter !== 'all' || statusFilter !== 'all' || formatFilter !== 'all' || dateFilter !== 'all'
-                        ? '검색 결과가 없습니다.'
-                        : '아직 요청이 없습니다. 새 글 요청을 생성해보세요!'}
+                  <TableCell
+                    colSpan={9}
+                    className="h-24 text-center text-muted-foreground"
+                  >
+                    {activeTab === "discard"
+                      ? "폐기된 요청이 없습니다."
+                      : activeTab === "archive"
+                        ? "아카이브된 요청이 없습니다."
+                        : searchQuery ||
+                            hospitalFilter !== "all" ||
+                            statusFilter !== "all" ||
+                            formatFilter !== "all" ||
+                            dateFilter !== "all"
+                          ? "검색 결과가 없습니다."
+                          : "아직 요청이 없습니다. 새 글 요청을 생성해보세요!"}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -340,14 +478,19 @@ export function DashboardContent() {
                     <TableCell className="font-mono text-xs text-muted-foreground">
                       {request.request_id}
                     </TableCell>
-                    <TableCell className="font-medium">{request.hospital_name}</TableCell>
+                    <TableCell className="font-medium">
+                      {request.hospital_name}
+                    </TableCell>
                     <TableCell>{request.target_keyword}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {request.topic_keyword}
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-center">
-                        <Badge variant="outline" className="text-xs whitespace-nowrap">
+                        <Badge
+                          variant="outline"
+                          className="text-xs whitespace-nowrap"
+                        >
                           {request.format_type}
                         </Badge>
                       </div>
@@ -365,21 +508,51 @@ export function DashboardContent() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {safeFormatDate(request.created_at, 'MM-dd HH:mm', { locale: ko })}
+                      {safeFormatDate(request.created_at, "MM-dd HH:mm", {
+                        locale: ko,
+                      })}
                     </TableCell>
                     <TableCell>
-                      {activeTab === 'active' && (request.status === '완료' || request.status === '수정완료') && (
+                      {activeTab === "active" &&
+                        (request.status === "완료" ||
+                          request.status === "수정완료") && (
+                          <div className="flex gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs gap-1"
+                              onClick={(e) =>
+                                handleArchive(e, request.request_id)
+                              }
+                            >
+                              <Archive className="h-3 w-3" />
+                              업로드완료
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs gap-1 text-destructive hover:text-destructive"
+                              onClick={(e) =>
+                                handleDiscard(e, request.request_id)
+                              }
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              폐기
+                            </Button>
+                          </div>
+                        )}
+                      {activeTab === "archive" && (
                         <Button
                           variant="outline"
                           size="sm"
                           className="text-xs gap-1"
-                          onClick={(e) => handleArchive(e, request.request_id)}
+                          onClick={(e) => handleRestore(e, request.request_id)}
                         >
-                          <Archive className="h-3 w-3" />
-                          업로드완료
+                          <Undo2 className="h-3 w-3" />
+                          복원
                         </Button>
                       )}
-                      {activeTab === 'archive' && (
+                      {activeTab === "discard" && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -420,7 +593,9 @@ export function DashboardContent() {
             <CheckCircle2 className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {stats.completed}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -429,7 +604,9 @@ export function DashboardContent() {
             <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.inProgress}</div>
+            <div className="text-2xl font-bold text-blue-600">
+              {stats.inProgress}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -469,7 +646,10 @@ export function DashboardContent() {
               {hospitals
                 .filter((hospital) => hospital.hospital_id)
                 .map((hospital) => (
-                  <SelectItem key={hospital.hospital_id} value={hospital.hospital_id}>
+                  <SelectItem
+                    key={hospital.hospital_id}
+                    value={hospital.hospital_id}
+                  >
                     {hospital.hospital_name}
                   </SelectItem>
                 ))}
@@ -505,7 +685,10 @@ export function DashboardContent() {
             </SelectContent>
           </Select>
 
-          <Select value={dateFilter} onValueChange={(v) => setDateFilter(v as DateFilter)}>
+          <Select
+            value={dateFilter}
+            onValueChange={(v) => setDateFilter(v as DateFilter)}
+          >
             <SelectTrigger className="w-full md:w-[140px]">
               <SelectValue placeholder="전체 기간" />
             </SelectTrigger>
@@ -517,26 +700,32 @@ export function DashboardContent() {
             </SelectContent>
           </Select>
 
-          <Button variant="outline" size="icon" onClick={refreshRequests} disabled={isLoading}>
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={refreshRequests}
+            disabled={isLoading}
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+            />
           </Button>
         </div>
       </div>
 
-      {/* Tabs: Active / Archive */}
+      {/* Tabs: Active / Archive / Discard */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-4">
           <TabsTrigger value="active">작업중 ({activeCount})</TabsTrigger>
           <TabsTrigger value="archive">아카이브 ({archiveCount})</TabsTrigger>
+          <TabsTrigger value="discard">폐기 ({discardCount})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="active">
-          {renderTable()}
-        </TabsContent>
+        <TabsContent value="active">{renderTable()}</TabsContent>
 
-        <TabsContent value="archive">
-          {renderTable()}
-        </TabsContent>
+        <TabsContent value="archive">{renderTable()}</TabsContent>
+
+        <TabsContent value="discard">{renderTable()}</TabsContent>
       </Tabs>
 
       {/* Pagination placeholder */}

@@ -13,30 +13,31 @@ export interface Hospital {
 
 // 요청 상태 타입
 export type RequestStatus =
-  | '대기'
-  | '생성중'
-  | '완료'
-  | '수정요청'
-  | '수정완료'
-  | '에러'
-  | '업로드완료';
+  | "대기"
+  | "생성중"
+  | "완료"
+  | "수정요청"
+  | "수정완료"
+  | "에러"
+  | "업로드완료"
+  | "폐기";
 
 // 글 구조 타입
 export type FormatType =
-  | 'Q&A형'
-  | '정보제공형'
-  | '치료과정 안내형'
-  | '비교분석형'
-  | '팩트체크형'
-  | '칼럼형'
-  | '기타'
+  | "Q&A형"
+  | "정보제공형"
+  | "치료과정 안내형"
+  | "비교분석형"
+  | "팩트체크형"
+  | "칼럼형"
+  | "기타"
   // 레거시 타입 (기존 데이터 호환용)
-  | '사례/스토리텔링형'
-  | '실패분석형'
-  | '치료과정 시뮬레이션형';
+  | "사례/스토리텔링형"
+  | "실패분석형"
+  | "치료과정 시뮬레이션형";
 
 // 채팅 메시지 역할
-export type ChatRole = 'user' | 'assistant' | 'system';
+export type ChatRole = "user" | "assistant" | "system";
 
 // 채팅 메시지 타입
 export interface ChatMessage {
@@ -82,7 +83,7 @@ export interface NewRequestFormData {
 }
 
 // 사용자 상태 타입
-export type UserStatus = 'pending' | 'approved' | 'blocked';
+export type UserStatus = "pending" | "approved" | "blocked";
 
 // 사용자 정보
 export interface User {
@@ -90,7 +91,7 @@ export interface User {
   email: string;
   name: string;
   avatar?: string;
-  role: 'admin' | 'user';
+  role: "admin" | "user";
   status: UserStatus;
   slack_member_id?: string; // Slack 개인 알림용
   created_at: string;

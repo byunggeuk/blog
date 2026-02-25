@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import { useRef, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { toPng } from 'html-to-image';
-import { Button } from '@/components/ui/button';
+import { useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { toPng } from "html-to-image";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   Download,
   Printer,
@@ -21,7 +21,7 @@ import {
   FileImage,
   FileCode,
   ChevronDown,
-} from 'lucide-react';
+} from "lucide-react";
 
 interface MarkdownViewerProps {
   content: string;
@@ -29,7 +29,11 @@ interface MarkdownViewerProps {
   className?: string;
 }
 
-export function MarkdownViewer({ content, title, className }: MarkdownViewerProps) {
+export function MarkdownViewer({
+  content,
+  title,
+  className,
+}: MarkdownViewerProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
 
@@ -54,25 +58,25 @@ export function MarkdownViewer({ content, title, className }: MarkdownViewerProp
     if (contentRef.current) {
       try {
         const dataUrl = await toPng(contentRef.current, {
-          backgroundColor: '#ffffff',
+          backgroundColor: "#ffffff",
           pixelRatio: 2,
         });
-        const link = document.createElement('a');
-        link.download = `${title || 'blog-content'}.png`;
+        const link = document.createElement("a");
+        link.download = `${title || "blog-content"}.png`;
         link.href = dataUrl;
         link.click();
       } catch (error) {
-        console.error('이미지 생성 실패:', error);
+        console.error("이미지 생성 실패:", error);
       }
     }
   };
 
   // 마크다운 파일 다운로드
   const handleDownloadMarkdown = () => {
-    const blob = new Blob([content], { type: 'text/markdown' });
+    const blob = new Blob([content], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.download = `${title || 'blog-content'}.md`;
+    const link = document.createElement("a");
+    link.download = `${title || "blog-content"}.md`;
     link.href = url;
     link.click();
     URL.revokeObjectURL(url);
@@ -86,7 +90,7 @@ export function MarkdownViewer({ content, title, className }: MarkdownViewerProp
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title || 'Blog Content'}</title>
+  <title>${title || "Blog Content"}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.8; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #333; }
     h1 { font-size: 2em; border-bottom: 2px solid #eee; padding-bottom: 0.5em; }
@@ -109,10 +113,10 @@ export function MarkdownViewer({ content, title, className }: MarkdownViewerProp
 ${contentRef.current.innerHTML}
 </body>
 </html>`;
-      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const blob = new Blob([htmlContent], { type: "text/html" });
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.download = `${title || 'blog-content'}.html`;
+      const link = document.createElement("a");
+      link.download = `${title || "blog-content"}.html`;
       link.href = url;
       link.click();
       URL.revokeObjectURL(url);
@@ -122,13 +126,13 @@ ${contentRef.current.innerHTML}
   // 프린트
   const handlePrint = () => {
     if (contentRef.current) {
-      const printWindow = window.open('', '_blank');
+      const printWindow = window.open("", "_blank");
       if (printWindow) {
         printWindow.document.write(`<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>${title || 'Blog Content'}</title>
+  <title>${title || "Blog Content"}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.8; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #333; }
     h1 { font-size: 2em; border-bottom: 2px solid #eee; padding-bottom: 0.5em; }
@@ -164,8 +168,12 @@ ${contentRef.current.innerHTML}
           onClick={handleCopyMarkdown}
           className="gap-2"
         >
-          {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-          {copied ? '복사됨' : '복사'}
+          {copied ? (
+            <Check className="h-4 w-4" />
+          ) : (
+            <Copy className="h-4 w-4" />
+          )}
+          {copied ? "복사됨" : "복사"}
         </Button>
 
         <DropdownMenu>
@@ -193,7 +201,12 @@ ${contentRef.current.innerHTML}
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handlePrint}
+          className="gap-2"
+        >
           <Printer className="h-4 w-4" />
           프린트
         </Button>
@@ -227,21 +240,25 @@ ${contentRef.current.innerHTML}
             blockquote: ({ children }) => (
               <blockquote
                 style={{
-                  borderLeft: '4px solid #3b82f6',
-                  backgroundColor: '#eff6ff',
-                  padding: '12px 16px',
-                  margin: '16px 0',
-                  borderRadius: '0 8px 8px 0',
-                  color: '#111827',
-                  fontStyle: 'normal',
+                  borderLeft: "4px solid #3b82f6",
+                  backgroundColor: "#eff6ff",
+                  padding: "12px 16px",
+                  margin: "16px 0",
+                  borderRadius: "0 8px 8px 0",
+                  color: "#111827",
+                  fontStyle: "normal",
                 }}
               >
-                <div style={{ color: '#111827' }}>{children}</div>
+                <div style={{ color: "#111827" }}>{children}</div>
               </blockquote>
             ),
             p: ({ children, ...props }) => {
               // blockquote 내부의 p 태그는 부모에서 처리
-              return <p style={{ color: 'inherit' }} {...props}>{children}</p>;
+              return (
+                <p style={{ color: "inherit" }} {...props}>
+                  {children}
+                </p>
+              );
             },
           }}
         >

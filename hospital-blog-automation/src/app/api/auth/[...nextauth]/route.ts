@@ -1,5 +1,5 @@
-import NextAuth from 'next-auth';
-import GoogleProvider from 'next-auth/providers/google';
+import NextAuth from "next-auth";
+import GoogleProvider from "next-auth/providers/google";
 
 const handler = NextAuth({
   providers: [
@@ -27,8 +27,8 @@ const handler = NextAuth({
     },
   },
   pages: {
-    signIn: '/',
-    error: '/',
+    signIn: "/",
+    error: "/",
   },
   secret: process.env.NEXTAUTH_SECRET,
 });

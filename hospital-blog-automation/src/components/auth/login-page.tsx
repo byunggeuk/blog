@@ -1,10 +1,16 @@
-'use client';
+"use client";
 
-import { signIn } from 'next-auth/react';
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, Loader2 } from 'lucide-react';
+import { signIn } from "next-auth/react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Building2, Loader2 } from "lucide-react";
 
 export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -12,9 +18,9 @@ export function LoginPage() {
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
-      await signIn('google', { callbackUrl: '/' });
+      await signIn("google", { callbackUrl: "/" });
     } catch (error) {
-      console.error('Login error:', error);
+      console.error("Login error:", error);
       setIsLoading(false);
     }
   };
@@ -49,14 +55,15 @@ export function LoginPage() {
               <Building2 className="h-8 w-8 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Hospital Blog Automation</CardTitle>
-          <CardDescription>
-            병원 블로그 글 자동 생성 시스템
-          </CardDescription>
+          <CardTitle className="text-2xl font-bold">
+            Hospital Blog Automation
+          </CardTitle>
+          <CardDescription>병원 블로그 글 자동 생성 시스템</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground text-center">
-            내부 직원만 접근 가능합니다.<br />
+            내부 직원만 접근 가능합니다.
+            <br />
             회사 Google 계정으로 로그인해주세요.
           </p>
 

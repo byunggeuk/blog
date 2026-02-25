@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useApp } from '@/lib/store';
-import { Hospital } from '@/types';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
+import { useState } from "react";
+import { useApp } from "@/lib/store";
+import { Hospital } from "@/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -15,8 +15,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+} from "@/components/ui/table";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -24,7 +30,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   Building2,
   Plus,
@@ -33,9 +39,9 @@ import {
   FolderOpen,
   FileText,
   ExternalLink,
-} from 'lucide-react';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
+} from "lucide-react";
+import { format } from "date-fns";
+import { ko } from "date-fns/locale";
 
 interface HospitalFormData {
   hospital_name: string;
@@ -47,12 +53,12 @@ interface HospitalFormData {
 }
 
 const initialFormData: HospitalFormData = {
-  hospital_name: '',
-  blog_url: '',
-  reference_folder_id: '',
-  output_folder_id: '',
-  prompt_name: '',
-  system_prompt: '',
+  hospital_name: "",
+  blog_url: "",
+  reference_folder_id: "",
+  output_folder_id: "",
+  prompt_name: "",
+  system_prompt: "",
 };
 
 export function HospitalManagement() {
@@ -60,11 +66,13 @@ export function HospitalManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingHospital, setEditingHospital] = useState<Hospital | null>(null);
-  const [deletingHospital, setDeletingHospital] = useState<Hospital | null>(null);
+  const [deletingHospital, setDeletingHospital] = useState<Hospital | null>(
+    null,
+  );
   const [formData, setFormData] = useState<HospitalFormData>(initialFormData);
   const [isLoading, setIsLoading] = useState(false);
 
-  const activeHospitals = hospitals.filter(h => h.is_active !== false);
+  const activeHospitals = hospitals.filter((h) => h.is_active !== false);
 
   const handleOpenAdd = () => {
     setEditingHospital(null);
@@ -76,11 +84,11 @@ export function HospitalManagement() {
     setEditingHospital(hospital);
     setFormData({
       hospital_name: hospital.hospital_name,
-      blog_url: hospital.blog_url || '',
-      reference_folder_id: hospital.reference_folder_id || '',
-      output_folder_id: hospital.output_folder_id || '',
-      prompt_name: hospital.prompt_name || '',
-      system_prompt: hospital.system_prompt || '',
+      blog_url: hospital.blog_url || "",
+      reference_folder_id: hospital.reference_folder_id || "",
+      output_folder_id: hospital.output_folder_id || "",
+      prompt_name: hospital.prompt_name || "",
+      system_prompt: hospital.system_prompt || "",
     });
     setIsDialogOpen(true);
   };
@@ -92,7 +100,7 @@ export function HospitalManagement() {
 
   const handleSubmit = async () => {
     if (!formData.hospital_name.trim()) {
-      alert('병원 이름을 입력해주세요.');
+      alert("병원 이름을 입력해주세요.");
       return;
     }
 
@@ -100,9 +108,9 @@ export function HospitalManagement() {
     try {
       if (editingHospital) {
         // 수정
-        const response = await fetch('/api/hospitals', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+        const response = await fetch("/api/hospitals", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ...editingHospital,
             ...formData,
@@ -111,19 +119,19 @@ export function HospitalManagement() {
 
         if (!response.ok) {
           const error = await response.json();
-          throw new Error(error.error || '수정 실패');
+          throw new Error(error.error || "수정 실패");
         }
       } else {
         // 추가
-        const response = await fetch('/api/hospitals', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const response = await fetch("/api/hospitals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(formData),
         });
 
         if (!response.ok) {
           const error = await response.json();
-          throw new Error(error.error || '추가 실패');
+          throw new Error(error.error || "추가 실패");
         }
       }
 
@@ -131,7 +139,7 @@ export function HospitalManagement() {
       setIsDialogOpen(false);
       setFormData(initialFormData);
     } catch (error) {
-      alert(error instanceof Error ? error.message : '오류가 발생했습니다.');
+      alert(error instanceof Error ? error.message : "오류가 발생했습니다.");
     } finally {
       setIsLoading(false);
     }
@@ -142,20 +150,23 @@ export function HospitalManagement() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/hospitals?id=${deletingHospital.hospital_id}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(
+        `/api/hospitals?id=${deletingHospital.hospital_id}`,
+        {
+          method: "DELETE",
+        },
+      );
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || '삭제 실패');
+        throw new Error(error.error || "삭제 실패");
       }
 
       await refreshData();
       setIsDeleteDialogOpen(false);
       setDeletingHospital(null);
     } catch (error) {
-      alert(error instanceof Error ? error.message : '오류가 발생했습니다.');
+      alert(error instanceof Error ? error.message : "오류가 발생했습니다.");
     } finally {
       setIsLoading(false);
     }
@@ -167,7 +178,9 @@ export function HospitalManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">병원 관리</h1>
-          <p className="text-muted-foreground">블로그를 생성할 병원 정보를 관리합니다.</p>
+          <p className="text-muted-foreground">
+            블로그를 생성할 병원 정보를 관리합니다.
+          </p>
         </div>
         <Button onClick={handleOpenAdd} className="gap-2">
           <Plus className="h-4 w-4" />
@@ -198,23 +211,35 @@ export function HospitalManagement() {
                   <TableHead className="font-semibold">병원명</TableHead>
                   <TableHead className="font-semibold">프롬프트</TableHead>
                   <TableHead className="font-semibold">폴더</TableHead>
-                  <TableHead className="font-semibold text-center">등록일</TableHead>
-                  <TableHead className="font-semibold text-center w-[100px]">작업</TableHead>
+                  <TableHead className="font-semibold text-center">
+                    등록일
+                  </TableHead>
+                  <TableHead className="font-semibold text-center w-[100px]">
+                    작업
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {activeHospitals.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                    <TableCell
+                      colSpan={5}
+                      className="h-24 text-center text-muted-foreground"
+                    >
                       등록된 병원이 없습니다.
                     </TableCell>
                   </TableRow>
                 ) : (
                   activeHospitals.map((hospital) => (
-                    <TableRow key={hospital.hospital_id} className="hover:bg-muted/30">
+                    <TableRow
+                      key={hospital.hospital_id}
+                      className="hover:bg-muted/30"
+                    >
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-medium">{hospital.hospital_name}</span>
+                          <span className="font-medium">
+                            {hospital.hospital_name}
+                          </span>
                           {hospital.blog_url && (
                             <a
                               href={hospital.blog_url}
@@ -235,7 +260,9 @@ export function HospitalManagement() {
                             {hospital.prompt_name}
                           </Badge>
                         ) : (
-                          <span className="text-muted-foreground text-sm">미설정</span>
+                          <span className="text-muted-foreground text-sm">
+                            미설정
+                          </span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -252,15 +279,22 @@ export function HospitalManagement() {
                               참조
                             </Badge>
                           )}
-                          {!hospital.output_folder_id && !hospital.reference_folder_id && (
-                            <span className="text-muted-foreground text-sm">미설정</span>
-                          )}
+                          {!hospital.output_folder_id &&
+                            !hospital.reference_folder_id && (
+                              <span className="text-muted-foreground text-sm">
+                                미설정
+                              </span>
+                            )}
                         </div>
                       </TableCell>
                       <TableCell className="text-center text-sm text-muted-foreground">
                         {hospital.created_at
-                          ? format(new Date(hospital.created_at), 'yyyy-MM-dd', { locale: ko })
-                          : '-'}
+                          ? format(
+                              new Date(hospital.created_at),
+                              "yyyy-MM-dd",
+                              { locale: ko },
+                            )
+                          : "-"}
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex justify-center gap-1">
@@ -295,9 +329,13 @@ export function HospitalManagement() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingHospital ? '병원 수정' : '병원 추가'}</DialogTitle>
+            <DialogTitle>
+              {editingHospital ? "병원 수정" : "병원 추가"}
+            </DialogTitle>
             <DialogDescription>
-              {editingHospital ? '병원 정보를 수정합니다.' : '새로운 병원을 등록합니다.'}
+              {editingHospital
+                ? "병원 정보를 수정합니다."
+                : "새로운 병원을 등록합니다."}
             </DialogDescription>
           </DialogHeader>
 
@@ -307,7 +345,9 @@ export function HospitalManagement() {
               <Input
                 id="hospital_name"
                 value={formData.hospital_name}
-                onChange={(e) => setFormData({ ...formData, hospital_name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, hospital_name: e.target.value })
+                }
                 placeholder="예: OO성형외과"
               />
             </div>
@@ -317,7 +357,9 @@ export function HospitalManagement() {
               <Input
                 id="blog_url"
                 value={formData.blog_url}
-                onChange={(e) => setFormData({ ...formData, blog_url: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, blog_url: e.target.value })
+                }
                 placeholder="https://blog.naver.com/..."
               />
             </div>
@@ -328,7 +370,12 @@ export function HospitalManagement() {
                 <Input
                   id="output_folder_id"
                   value={formData.output_folder_id}
-                  onChange={(e) => setFormData({ ...formData, output_folder_id: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      output_folder_id: e.target.value,
+                    })
+                  }
                   placeholder="Google Drive 폴더 ID"
                 />
               </div>
@@ -337,7 +384,12 @@ export function HospitalManagement() {
                 <Input
                   id="reference_folder_id"
                   value={formData.reference_folder_id}
-                  onChange={(e) => setFormData({ ...formData, reference_folder_id: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      reference_folder_id: e.target.value,
+                    })
+                  }
                   placeholder="Google Drive 폴더 ID"
                 />
               </div>
@@ -348,10 +400,14 @@ export function HospitalManagement() {
               <Input
                 id="prompt_name"
                 value={formData.prompt_name}
-                onChange={(e) => setFormData({ ...formData, prompt_name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, prompt_name: e.target.value })
+                }
                 placeholder="예: 성형외과_기본프롬프트"
               />
-              <p className="text-xs text-muted-foreground">시트에 표시될 짧은 이름입니다.</p>
+              <p className="text-xs text-muted-foreground">
+                시트에 표시될 짧은 이름입니다.
+              </p>
             </div>
 
             <div className="grid gap-2">
@@ -359,7 +415,9 @@ export function HospitalManagement() {
               <Textarea
                 id="system_prompt"
                 value={formData.system_prompt}
-                onChange={(e) => setFormData({ ...formData, system_prompt: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, system_prompt: e.target.value })
+                }
                 placeholder="블로그 글 생성 시 사용할 시스템 프롬프트를 입력하세요..."
                 rows={10}
               />
@@ -371,7 +429,7 @@ export function HospitalManagement() {
               취소
             </Button>
             <Button onClick={handleSubmit} disabled={isLoading}>
-              {isLoading ? '저장 중...' : editingHospital ? '수정' : '추가'}
+              {isLoading ? "저장 중..." : editingHospital ? "수정" : "추가"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -388,11 +446,18 @@ export function HospitalManagement() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
               취소
             </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={isLoading}>
-              {isLoading ? '삭제 중...' : '삭제'}
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isLoading}
+            >
+              {isLoading ? "삭제 중..." : "삭제"}
             </Button>
           </DialogFooter>
         </DialogContent>

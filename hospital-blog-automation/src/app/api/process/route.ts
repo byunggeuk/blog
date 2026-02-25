@@ -1,170 +1,189 @@
-import { NextResponse } from 'next/server';
-  import { google } from 'googleapis';
-  import Anthropic from '@anthropic-ai/sdk';
-  import { getReferenceContents } from '@/lib/google-drive';
+import { NextResponse } from "next/server";
+import { google } from "googleapis";
+import Anthropic from "@anthropic-ai/sdk";
+import { getReferenceContents } from "@/lib/google-drive";
 
-  // Google Sheets 인증
-  function getAuthClient() {
-    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY || '{}');
-    return new google.auth.GoogleAuth({
-      credentials,
-      scopes: [
-        'https://www.googleapis.com/auth/spreadsheets',
-        'https://www.googleapis.com/auth/drive',
-      ],
-    });
+// Google Sheets 인증
+function getAuthClient() {
+  const credentials = JSON.parse(
+    process.env.GOOGLE_SERVICE_ACCOUNT_KEY || "{}",
+  );
+  return new google.auth.GoogleAuth({
+    credentials,
+    scopes: [
+      "https://www.googleapis.com/auth/spreadsheets",
+      "https://www.googleapis.com/auth/drive",
+    ],
+  });
+}
+
+function getSpreadsheetId() {
+  return process.env.GOOGLE_SPREADSHEET_ID || "";
+}
+
+// 구글 시트 친화적인 날짜 형식 (YYYY-MM-DD HH:mm:ss)
+function formatDateForSheets(date: Date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+// 병원 정보 가져오기
+async function getHospitalById(
+  sheets: any,
+  spreadsheetId: string,
+  hospitalId: string,
+) {
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: "병원설정!A2:I100",
+  });
+
+  const rows = response.data.values || [];
+  for (const row of rows) {
+    if (row[0] === hospitalId) {
+      return {
+        hospital_id: row[0] || "",
+        hospital_name: row[1] || "",
+        blog_url: row[2] || "",
+        reference_folder_id: row[3] || "",
+        output_folder_id: row[4] || "",
+        prompt_name: row[5] || "",
+        system_prompt: row[6] || "",
+      };
+    }
+  }
+  return null;
+}
+
+// 요청 상태 업데이트
+async function updateRequestStatus(
+  sheets: any,
+  spreadsheetId: string,
+  rowIndex: number,
+  status: string,
+  resultDocId?: string,
+  resultDocUrl?: string,
+  completedAt?: string,
+  chatHistory?: string,
+) {
+  const updates: any[] = [];
+
+  updates.push({
+    range: `요청목록!J${rowIndex}`,
+    values: [[status]],
+  });
+
+  if (resultDocId) {
+    updates.push({ range: `요청목록!K${rowIndex}`, values: [[resultDocId]] });
+  }
+  if (resultDocUrl) {
+    updates.push({ range: `요청목록!L${rowIndex}`, values: [[resultDocUrl]] });
+  }
+  if (completedAt) {
+    updates.push({ range: `요청목록!N${rowIndex}`, values: [[completedAt]] });
+  }
+  if (chatHistory) {
+    updates.push({ range: `요청목록!O${rowIndex}`, values: [[chatHistory]] });
   }
 
-  function getSpreadsheetId() {
-    return process.env.GOOGLE_SPREADSHEET_ID || '';
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      valueInputOption: "RAW",
+      data: updates,
+    },
+  });
+}
+
+// Google Drive에 마크다운 파일 생성 (공유 드라이브 필수)
+async function createMarkdownFile(
+  drive: any,
+  fileName: string,
+  content: string,
+  folderId?: string,
+) {
+  if (!folderId) {
+    throw new Error(
+      "output_folder_id가 설정되지 않았습니다. 병원설정에서 출력 폴더 ID를 확인해주세요.",
+    );
   }
 
-  // 구글 시트 친화적인 날짜 형식 (YYYY-MM-DD HH:mm:ss)
-  function formatDateForSheets(date: Date = new Date()): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  const fileMetadata: any = {
+    name: `${fileName}.md`,
+    mimeType: "text/markdown",
+    parents: [folderId],
+  };
+
+  const createResponse = await drive.files.create({
+    requestBody: fileMetadata,
+    media: {
+      mimeType: "text/markdown",
+      body: content,
+    },
+    fields: "id, webViewLink",
+    supportsAllDrives: true,
+  });
+
+  const fileId = createResponse.data.id;
+  if (!fileId) {
+    throw new Error("파일 생성에 실패했습니다.");
   }
 
-  // 병원 정보 가져오기
-  async function getHospitalById(sheets: any, spreadsheetId: string, hospitalId: string) {
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: '병원설정!A2:I100',
-    });
+  // 파일을 누구나 볼 수 있도록 권한 설정 (링크 공유)
+  await drive.permissions.create({
+    fileId: fileId,
+    requestBody: {
+      role: "reader",
+      type: "anyone",
+    },
+    supportsAllDrives: true,
+  });
 
-    const rows = response.data.values || [];
-    for (const row of rows) {
-      if (row[0] === hospitalId) {
-        return {
-          hospital_id: row[0] || '',
-          hospital_name: row[1] || '',
-          blog_url: row[2] || '',
-          reference_folder_id: row[3] || '',
-          output_folder_id: row[4] || '',
-          prompt_name: row[5] || '',
-          system_prompt: row[6] || '',
-        };
-      }
-    }
-    return null;
-  }
+  return {
+    fileId,
+    fileUrl:
+      createResponse.data.webViewLink ||
+      `https://drive.google.com/file/d/${fileId}/view`,
+  };
+}
 
-  // 요청 상태 업데이트
-  async function updateRequestStatus(
-    sheets: any,
-    spreadsheetId: string,
-    rowIndex: number,
-    status: string,
-    resultDocId?: string,
-    resultDocUrl?: string,
-    completedAt?: string,
-    chatHistory?: string
-  ) {
-    const updates: any[] = [];
+// Claude API로 블로그 글 생성
+async function generateBlogContent(
+  hospitalName: string,
+  systemPrompt: string,
+  targetKeyword: string,
+  topicKeyword: string,
+  purpose: string,
+  formatType: string,
+  formatCustom?: string,
+  referenceText?: string,
+) {
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    updates.push({
-      range: `요청목록!J${rowIndex}`,
-      values: [[status]],
-    });
-
-    if (resultDocId) {
-      updates.push({ range: `요청목록!K${rowIndex}`, values: [[resultDocId]] });
-    }
-    if (resultDocUrl) {
-      updates.push({ range: `요청목록!L${rowIndex}`, values: [[resultDocUrl]] });
-    }
-    if (completedAt) {
-      updates.push({ range: `요청목록!N${rowIndex}`, values: [[completedAt]] });
-    }
-    if (chatHistory) {
-      updates.push({ range: `요청목록!O${rowIndex}`, values: [[chatHistory]] });
-    }
-
-    await sheets.spreadsheets.values.batchUpdate({
-      spreadsheetId,
-      requestBody: {
-        valueInputOption: 'RAW',
-        data: updates,
-      },
-    });
-  }
-
-  // Google Drive에 마크다운 파일 생성 (공유 드라이브 필수)
-  async function createMarkdownFile(
-    drive: any,
-    fileName: string,
-    content: string,
-    folderId?: string
-  ) {
-    if (!folderId) {
-      throw new Error('output_folder_id가 설정되지 않았습니다. 병원설정에서 출력 폴더 ID를 확인해주세요.');
-    }
-
-    const fileMetadata: any = {
-      name: `${fileName}.md`,
-      mimeType: 'text/markdown',
-      parents: [folderId],
-    };
-
-    const createResponse = await drive.files.create({
-      requestBody: fileMetadata,
-      media: {
-        mimeType: 'text/markdown',
-        body: content,
-      },
-      fields: 'id, webViewLink',
-      supportsAllDrives: true,
-    });
-
-    const fileId = createResponse.data.id;
-    if (!fileId) {
-      throw new Error('파일 생성에 실패했습니다.');
-    }
-
-    // 파일을 누구나 볼 수 있도록 권한 설정 (링크 공유)
-    await drive.permissions.create({
-      fileId: fileId,
-      requestBody: {
-        role: 'reader',
-        type: 'anyone',
-      },
-      supportsAllDrives: true,
-    });
-
-    return {
-      fileId,
-      fileUrl: createResponse.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`,
-    };
-  }
-
-  // Claude API로 블로그 글 생성
-  async function generateBlogContent(
-    hospitalName: string,
-    systemPrompt: string,
-    targetKeyword: string,
-    topicKeyword: string,
-    purpose: string,
-    formatType: string,
-    formatCustom?: string,
-    referenceText?: string
-  ) {
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-    const baseSystemPrompt = `당신은 ${hospitalName}의 전문 의료 블로그 작성자입니다.
+  const baseSystemPrompt =
+    `당신은 ${hospitalName}의 전문 의료 블로그 작성자입니다.
 
   ${systemPrompt}
+
+  ## 형식 규칙
+
+  글의 구조는 다음을 따르세요: ##으로 대제목 1개, ###으로 소제목 6개, 소제목 없는 마무리 문단 1개.
+  대제목은 반드시 "타겟 키워드, 나머지 부분" 형태로 작성하세요. 예: ## 회전근개파열, 어깨 통증의 원인과 치료법
+  분량은 2000자에서 3000자 사이로 작성하세요.
+  소제목은 ###으로 표시하고, 항상 독자의 흥미를 유도하는 질문 형태로 작성하세요.
+  소제목 아래에는 바로 본문 문단이 시작되어야 합니다. 하위 소제목(####), 볼드체 항목명, 글머리 기호(-, *, 1.)로 정보를 정리하는 것은 금지입니다. 요점 정리나 나열이 아닌, 문단과 문단이 자연스럽게 이어지는 산문체로 작성하세요.
+  한 문단은 평균 여섯 문장 정도가 적당합니다.
 
   ## 작성 규칙
   1. 정확한 의료 정보를 바탕으로 작성
   2. 환자가 이해하기 쉬운 언어 사용
   3. SEO를 고려한 키워드 배치
   4. 병원의 전문성과 신뢰성 강조
-  5. 마크다운 형식으로 작성 (제목은 ##, 소제목은 ###)
 
   ## ⚠️ 최우선 원칙: 사실만 작성 (할루시네이션 절대 금지)
 
@@ -193,7 +212,9 @@ import { NextResponse } from 'next/server';
   1. 이 숫자/통계의 출처를 댈 수 있는가? → 출처 없으면 삭제
   2. 이 환자 사례는 실제인가? → 가상이면 삭제 (가상 사례도 쓰지 마세요)
   3. 이 기간/효과를 보장할 수 있는가? → 보장 못하면 "개인차가 있습니다" 추가
-  4. 이 비교/우위 주장의 근거가 있는가? → 근거 없으면 삭제` + (referenceText ? `
+  4. 이 비교/우위 주장의 근거가 있는가? → 근거 없으면 삭제` +
+    (referenceText
+      ? `
 
   ## 참고자료
   아래는 이 병원에서 제공한 참고자료입니다. 반드시 다음 규칙을 따르세요:
@@ -201,238 +222,293 @@ import { NextResponse } from 'next/server';
   - 참고자료에 없는 의료 정보는 '일반적으로 알려진 바에 따르면'과 같은 표현을 사용하세요
   - 참고자료의 내용과 모순되는 내용을 절대 작성하지 마세요
 
-  ${referenceText}` : '');
+  ${referenceText}`
+      : "");
 
-    const userPrompt = `다음 조건에 맞는 블로그 글을 작성해주세요.
+  const userPrompt = `다음 조건에 맞는 블로그 글을 작성해주세요.
 
   **타겟 키워드:** ${targetKeyword}
   **주제:** ${topicKeyword}
   **목적:** ${purpose}
-  **구조:** ${formatType}${formatCustom ? `\n**추가 요청:** ${formatCustom}` : ''}
+  **구조:** ${formatType}${formatCustom ? `\n**추가 요청:** ${formatCustom}` : ""}
 
   위 조건에 맞춰 완성된 블로그 글을 마크다운 형식으로 작성해주세요.`;
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 8096,
-      temperature: 0,
-      system: baseSystemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
+  const response = await anthropic.messages.create({
+    model: "claude-sonnet-4-5-20250929",
+    max_tokens: 8096,
+    temperature: 0,
+    system: baseSystemPrompt,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+
+  const textContent = response.content.find((block) => block.type === "text");
+  return textContent ? textContent.text : "";
+}
+
+// POST: 대기 중인 요청 처리
+export async function POST() {
+  let currentProcessingRowIndex: number | null = null;
+  let currentRequestId: string | null = null;
+
+  try {
+    if (
+      !process.env.GOOGLE_SERVICE_ACCOUNT_KEY ||
+      !process.env.GOOGLE_SPREADSHEET_ID
+    ) {
+      return NextResponse.json(
+        { error: "Google Sheets 환경변수가 설정되지 않았습니다." },
+        { status: 400 },
+      );
+    }
+
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json(
+        { error: "Anthropic API 키가 설정되지 않았습니다." },
+        { status: 400 },
+      );
+    }
+
+    const auth = getAuthClient();
+    const sheets = google.sheets({ version: "v4", auth });
+    const drive = google.drive({ version: "v3", auth });
+    const spreadsheetId = getSpreadsheetId();
+
+    // 요청 목록 가져오기
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: "요청목록!A2:P1000",
     });
 
-    const textContent = response.content.find((block) => block.type === 'text');
-    return textContent ? textContent.text : '';
-  }
+    const rows = response.data.values || [];
+    const results: any[] = [];
 
-  // POST: 대기 중인 요청 처리
-  export async function POST() {
-    let currentProcessingRowIndex: number | null = null;
-    let currentRequestId: string | null = null;
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const status = row[9] || "";
 
-    try {
-      if (!process.env.GOOGLE_SERVICE_ACCOUNT_KEY || !process.env.GOOGLE_SPREADSHEET_ID) {
-        return NextResponse.json(
-          { error: 'Google Sheets 환경변수가 설정되지 않았습니다.' },
-          { status: 400 }
-        );
+      // 이미 처리된 상태는 건너뜀 (완료, 생성중, 에러, 수정요청, 수정완료, 업로드완료)
+      if (status && status !== "대기") continue;
+
+      const rowIndex = i + 2;
+      const requestId = row[0] || "";
+      const hospitalId = row[2] || "";
+      const targetKeyword = row[4] || "";
+      const topicKeyword = row[5] || "";
+      const purpose = row[6] || "";
+      const formatType = row[7] || "";
+      const formatCustom = row[8] || "";
+
+      // 필수 필드 검증: 모든 필수 정보가 입력되었는지 확인
+      // (format_custom은 선택사항이므로 검증하지 않음)
+      if (
+        !requestId ||
+        !hospitalId ||
+        !targetKeyword ||
+        !topicKeyword ||
+        !purpose ||
+        !formatType
+      ) {
+        // 필수 필드가 비어있으면 건너뜀 (아직 입력 중인 상태)
+        continue;
       }
 
-      if (!process.env.ANTHROPIC_API_KEY) {
-        return NextResponse.json(
-          { error: 'Anthropic API 키가 설정되지 않았습니다.' },
-          { status: 400 }
-        );
+      // created_at이 비어있으면 현재 시간으로 설정
+      const createdAt = row[1] || formatDateForSheets();
+      if (!row[1]) {
+        await sheets.spreadsheets.values.update({
+          spreadsheetId,
+          range: `요청목록!B${rowIndex}`,
+          valueInputOption: "RAW",
+          requestBody: { values: [[createdAt]] },
+        });
       }
 
-      const auth = getAuthClient();
-      const sheets = google.sheets({ version: 'v4', auth });
-      const drive = google.drive({ version: 'v3', auth });
-      const spreadsheetId = getSpreadsheetId();
+      try {
+        currentProcessingRowIndex = rowIndex;
+        currentRequestId = requestId;
+        await updateRequestStatus(sheets, spreadsheetId, rowIndex, "생성중");
 
-      // 요청 목록 가져오기
-      const response = await sheets.spreadsheets.values.get({
-        spreadsheetId,
-        range: '요청목록!A2:P1000',
-      });
-
-      const rows = response.data.values || [];
-      const results: any[] = [];
-
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        const status = row[9] || '';
-
-        // 이미 처리된 상태는 건너뜀 (완료, 생성중, 에러, 수정요청, 수정완료, 업로드완료)
-        if (status && status !== '대기') continue;
-
-        const rowIndex = i + 2;
-        const requestId = row[0] || '';
-        const hospitalId = row[2] || '';
-        const targetKeyword = row[4] || '';
-        const topicKeyword = row[5] || '';
-        const purpose = row[6] || '';
-        const formatType = row[7] || '';
-        const formatCustom = row[8] || '';
-
-        // 필수 필드 검증: 모든 필수 정보가 입력되었는지 확인
-        // (format_custom은 선택사항이므로 검증하지 않음)
-        if (!requestId || !hospitalId || !targetKeyword || !topicKeyword || !purpose || !formatType) {
-          // 필수 필드가 비어있으면 건너뜀 (아직 입력 중인 상태)
+        const hospital = await getHospitalById(
+          sheets,
+          spreadsheetId,
+          hospitalId,
+        );
+        if (!hospital) {
+          await updateRequestStatus(sheets, spreadsheetId, rowIndex, "에러");
+          results.push({
+            requestId,
+            status: "error",
+            message: "병원 정보를 찾을 수 없습니다.",
+          });
           continue;
         }
 
-        // created_at이 비어있으면 현재 시간으로 설정
-        const createdAt = row[1] || formatDateForSheets();
-        if (!row[1]) {
-          await sheets.spreadsheets.values.update({
-            spreadsheetId,
-            range: `요청목록!B${rowIndex}`,
-            valueInputOption: 'RAW',
-            requestBody: { values: [[createdAt]] },
-          });
+        // 참고자료 읽기
+        let referenceText = "";
+        if (hospital.reference_folder_id) {
+          try {
+            referenceText = await getReferenceContents(
+              hospital.reference_folder_id,
+            );
+          } catch (refError) {
+            console.error(
+              `참고자료 읽기 실패 (${hospital.hospital_name}):`,
+              refError,
+            );
+          }
         }
 
+        const content = await generateBlogContent(
+          hospital.hospital_name,
+          hospital.system_prompt,
+          targetKeyword,
+          topicKeyword,
+          purpose,
+          formatType,
+          formatCustom,
+          referenceText,
+        );
+
+        const fileName = `${targetKeyword}_${requestId}`;
+        const { fileId, fileUrl } = await createMarkdownFile(
+          drive,
+          fileName,
+          content,
+          hospital.output_folder_id,
+        );
+
+        const now = formatDateForSheets();
+        const chatHistory = JSON.stringify([
+          {
+            id: `msg_${Date.now()}_1`,
+            role: "system",
+            content: `블로그 글 생성을 시작합니다.\n\n**타겟 키워드:** ${targetKeyword}\n**주제:** ${topicKeyword}\n**구조:** ${formatType}`,
+            created_at: now,
+          },
+          {
+            id: `msg_${Date.now()}_2`,
+            role: "assistant",
+            content: content,
+            created_at: now,
+            doc_id: fileId,
+            doc_url: fileUrl,
+          },
+        ]);
+
+        await updateRequestStatus(
+          sheets,
+          spreadsheetId,
+          rowIndex,
+          "완료",
+          fileId,
+          fileUrl,
+          now,
+          chatHistory,
+        );
+
+        currentProcessingRowIndex = null;
+        currentRequestId = null;
+
+        results.push({
+          requestId,
+          status: "completed",
+          fileId,
+          fileUrl,
+        });
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "알 수 없는 오류";
+        console.error(`요청 ${requestId} 처리 실패:`, error);
+        const errorChatHistory = JSON.stringify([
+          {
+            id: `error_${Date.now()}`,
+            role: "system",
+            content: `에러 발생: ${errorMessage}`,
+            created_at: formatDateForSheets(),
+          },
+        ]);
+
+        // 상태 업데이트 시도 - 실패해도 계속 진행
         try {
-          currentProcessingRowIndex = rowIndex;
-          currentRequestId = requestId;
-          await updateRequestStatus(sheets, spreadsheetId, rowIndex, '생성중');
-
-          const hospital = await getHospitalById(sheets, spreadsheetId, hospitalId);
-          if (!hospital) {
-            await updateRequestStatus(sheets, spreadsheetId, rowIndex, '에러');
-            results.push({ requestId, status: 'error', message: '병원 정보를 찾을 수 없습니다.' });
-            continue;
-          }
-
-          // 참고자료 읽기
-          let referenceText = '';
-          if (hospital.reference_folder_id) {
-            try {
-              referenceText = await getReferenceContents(hospital.reference_folder_id);
-            } catch (refError) {
-              console.error(`참고자료 읽기 실패 (${hospital.hospital_name}):`, refError);
-            }
-          }
-
-          const content = await generateBlogContent(
-            hospital.hospital_name,
-            hospital.system_prompt,
-            targetKeyword,
-            topicKeyword,
-            purpose,
-            formatType,
-            formatCustom,
-            referenceText
-          );
-
-          const fileName = `${targetKeyword}_${requestId}`;
-          const { fileId, fileUrl } = await createMarkdownFile(
-            drive,
-            fileName,
-            content,
-            hospital.output_folder_id
-          );
-
-          const now = formatDateForSheets();
-          const chatHistory = JSON.stringify([
-            {
-              id: `msg_${Date.now()}_1`,
-              role: 'system',
-              content: `블로그 글 생성을 시작합니다.\n\n**타겟 키워드:** ${targetKeyword}\n**주제:** ${topicKeyword}\n**구조:** ${formatType}`,
-              created_at: now,
-            },
-            {
-              id: `msg_${Date.now()}_2`,
-              role: 'assistant',
-              content: content,
-              created_at: now,
-              doc_id: fileId,
-              doc_url: fileUrl,
-            },
-          ]);
-
           await updateRequestStatus(
             sheets,
             spreadsheetId,
             rowIndex,
-            '완료',
-            fileId,
-            fileUrl,
-            now,
-            chatHistory
+            "에러",
+            undefined,
+            undefined,
+            undefined,
+            errorChatHistory,
           );
-
-          currentProcessingRowIndex = null;
-          currentRequestId = null;
-
-          results.push({
-            requestId,
-            status: 'completed',
-            fileId,
-            fileUrl,
-          });
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
-          console.error(`요청 ${requestId} 처리 실패:`, error);
-          const errorChatHistory = JSON.stringify([{
-            id: `error_${Date.now()}`,
-            role: 'system',
-            content: `에러 발생: ${errorMessage}`,
-            created_at: formatDateForSheets(),
-          }]);
-
-          // 상태 업데이트 시도 - 실패해도 계속 진행
-          try {
-            await updateRequestStatus(sheets, spreadsheetId, rowIndex, '에러', undefined, undefined, undefined, errorChatHistory);
-          } catch (updateError) {
-            console.error(`요청 ${requestId} 상태 업데이트 실패:`, updateError);
-          }
-
-          currentProcessingRowIndex = null;
-          currentRequestId = null;
-
-          results.push({
-            requestId,
-            status: 'error',
-            message: errorMessage,
-          });
+        } catch (updateError) {
+          console.error(`요청 ${requestId} 상태 업데이트 실패:`, updateError);
         }
+
+        currentProcessingRowIndex = null;
+        currentRequestId = null;
+
+        results.push({
+          requestId,
+          status: "error",
+          message: errorMessage,
+        });
       }
-
-      return NextResponse.json({
-        success: true,
-        processed: results.length,
-        results,
-      });
-    } catch (error) {
-      console.error('Process API Error:', error);
-
-      // 처리 중이던 요청이 있으면 상태를 '대기'로 복구 시도
-      if (currentProcessingRowIndex !== null) {
-        try {
-          const auth = getAuthClient();
-          const sheets = google.sheets({ version: 'v4', auth });
-          const spreadsheetId = getSpreadsheetId();
-          const errorChatHistory = JSON.stringify([{
-            id: `error_${Date.now()}`,
-            role: 'system',
-            content: `에러 발생: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
-            created_at: formatDateForSheets(),
-          }]);
-          await updateRequestStatus(sheets, spreadsheetId, currentProcessingRowIndex, '에러', undefined, undefined, undefined, errorChatHistory);
-          console.log(`요청 ${currentRequestId} 상태를 '에러'로 복구했습니다.`);
-        } catch (recoveryError) {
-          console.error(`요청 ${currentRequestId} 상태 복구 실패:`, recoveryError);
-        }
-      }
-
-      return NextResponse.json(
-        { error: error instanceof Error ? error.message : '처리 중 오류가 발생했습니다.' },
-        { status: 500 }
-      );
     }
-  }
 
-  export async function GET() {
-    return POST();
+    return NextResponse.json({
+      success: true,
+      processed: results.length,
+      results,
+    });
+  } catch (error) {
+    console.error("Process API Error:", error);
+
+    // 처리 중이던 요청이 있으면 상태를 '대기'로 복구 시도
+    if (currentProcessingRowIndex !== null) {
+      try {
+        const auth = getAuthClient();
+        const sheets = google.sheets({ version: "v4", auth });
+        const spreadsheetId = getSpreadsheetId();
+        const errorChatHistory = JSON.stringify([
+          {
+            id: `error_${Date.now()}`,
+            role: "system",
+            content: `에러 발생: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
+            created_at: formatDateForSheets(),
+          },
+        ]);
+        await updateRequestStatus(
+          sheets,
+          spreadsheetId,
+          currentProcessingRowIndex,
+          "에러",
+          undefined,
+          undefined,
+          undefined,
+          errorChatHistory,
+        );
+        console.log(`요청 ${currentRequestId} 상태를 '에러'로 복구했습니다.`);
+      } catch (recoveryError) {
+        console.error(
+          `요청 ${currentRequestId} 상태 복구 실패:`,
+          recoveryError,
+        );
+      }
+    }
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "처리 중 오류가 발생했습니다.",
+      },
+      { status: 500 },
+    );
   }
+}
+
+export async function GET() {
+  return POST();
+}

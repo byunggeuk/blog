@@ -19,7 +19,7 @@
  */
 
 // ⚠️ 여기에 Vercel 배포 URL 입력
-const VERCEL_URL = 'https://your-app.vercel.app';
+const VERCEL_URL = "https://your-app.vercel.app";
 
 /**
  * 시트 편집 시 자동 실행되는 함수
@@ -40,7 +40,7 @@ function onEdit(e) {
   const sheetName = sheet.getName();
 
   // 요청목록 시트에서만 작동
-  if (sheetName !== '요청목록') return;
+  if (sheetName !== "요청목록") return;
 
   const range = e.range;
   const row = range.getRow();
@@ -56,10 +56,10 @@ function onEdit(e) {
   const statusCell = sheet.getRange(row, 10).getValue();
 
   // 새로 추가된 행이거나 상태가 '대기'인 경우
-  if (statusCell === '대기' || statusCell === '') {
+  if (statusCell === "대기" || statusCell === "") {
     // 상태가 비어있으면 '대기'로 설정
-    if (statusCell === '') {
-      sheet.getRange(row, 10).setValue('대기');
+    if (statusCell === "") {
+      sheet.getRange(row, 10).setValue("대기");
     }
 
     // 처리 API 호출 (비동기)
@@ -79,14 +79,14 @@ function autoFillCreatedBy(sheet, row) {
   const currentValue = createdByCell.getValue();
 
   // 이미 값이 있으면 건드리지 않음
-  if (currentValue && currentValue.toString().trim() !== '') {
+  if (currentValue && currentValue.toString().trim() !== "") {
     return;
   }
 
   // 해당 행에 데이터가 있는지 확인 (최소한 hospital_name이 있어야 함)
   const hospitalName = sheet.getRange(row, 4).getValue(); // D열 (hospital_name)
 
-  if (!hospitalName || hospitalName.toString().trim() === '') {
+  if (!hospitalName || hospitalName.toString().trim() === "") {
     return; // 데이터가 없는 행은 무시
   }
 
@@ -122,7 +122,7 @@ function getCurrentUserEmail() {
 
     return null;
   } catch (error) {
-    console.log('사용자 이메일 가져오기 실패:', error);
+    console.log("사용자 이메일 가져오기 실패:", error);
     return null;
   }
 }
@@ -132,7 +132,7 @@ function getCurrentUserEmail() {
  * 트리거: 폼 제출 시 또는 변경 시
  */
 function onChange(e) {
-  if (e.changeType === 'INSERT_ROW' || e.changeType === 'EDIT') {
+  if (e.changeType === "INSERT_ROW" || e.changeType === "EDIT") {
     // 잠시 대기 후 처리 (데이터 입력 완료 대기)
     Utilities.sleep(2000);
 
@@ -148,7 +148,8 @@ function onChange(e) {
  * 모든 데이터 행에서 created_by가 비어있는 경우 현재 사용자 이메일로 채움
  */
 function fillEmptyCreatedBy() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('요청목록');
+  const sheet =
+    SpreadsheetApp.getActiveSpreadsheet().getSheetByName("요청목록");
   if (!sheet) return;
 
   const lastRow = sheet.getLastRow();
@@ -156,7 +157,7 @@ function fillEmptyCreatedBy() {
 
   const userEmail = getCurrentUserEmail();
   if (!userEmail) {
-    console.log('사용자 이메일을 가져올 수 없습니다.');
+    console.log("사용자 이메일을 가져올 수 없습니다.");
     return;
   }
 
@@ -167,14 +168,16 @@ function fillEmptyCreatedBy() {
     const hospitalName = sheet.getRange(row, 4).getValue(); // D열
 
     // 데이터가 있고 created_by가 비어있는 경우에만
-    if (hospitalName && (!createdBy || createdBy.toString().trim() === '')) {
+    if (hospitalName && (!createdBy || createdBy.toString().trim() === "")) {
       sheet.getRange(row, 16).setValue(userEmail);
       filledCount++;
     }
   }
 
   if (filledCount > 0) {
-    console.log(`${filledCount}개 행의 created_by를 ${userEmail}로 채웠습니다.`);
+    console.log(
+      `${filledCount}개 행의 created_by를 ${userEmail}로 채웠습니다.`,
+    );
   }
 
   return filledCount;
@@ -185,20 +188,20 @@ function fillEmptyCreatedBy() {
  */
 function triggerProcessing() {
   try {
-    const url = VERCEL_URL + '/api/process';
+    const url = VERCEL_URL + "/api/process";
 
     const options = {
-      'method': 'POST',
-      'muteHttpExceptions': true,
-      'headers': {
-        'Content-Type': 'application/json'
-      }
+      method: "POST",
+      muteHttpExceptions: true,
+      headers: {
+        "Content-Type": "application/json",
+      },
     };
 
     const response = UrlFetchApp.fetch(url, options);
     const result = JSON.parse(response.getContentText());
 
-    console.log('처리 결과:', result);
+    console.log("처리 결과:", result);
 
     if (result.processed > 0) {
       // 선택사항: 처리 완료 알림
@@ -207,7 +210,7 @@ function triggerProcessing() {
 
     return result;
   } catch (error) {
-    console.error('API 호출 실패:', error);
+    console.error("API 호출 실패:", error);
     return null;
   }
 }
@@ -221,15 +224,15 @@ function manualProcess() {
 
   if (result) {
     SpreadsheetApp.getUi().alert(
-      '처리 완료',
+      "처리 완료",
       `${result.processed}개의 요청이 처리되었습니다.`,
-      SpreadsheetApp.getUi().ButtonSet.OK
+      SpreadsheetApp.getUi().ButtonSet.OK,
     );
   } else {
     SpreadsheetApp.getUi().alert(
-      '오류',
-      '처리 중 오류가 발생했습니다. 로그를 확인해주세요.',
-      SpreadsheetApp.getUi().ButtonSet.OK
+      "오류",
+      "처리 중 오류가 발생했습니다. 로그를 확인해주세요.",
+      SpreadsheetApp.getUi().ButtonSet.OK,
     );
   }
 }
@@ -239,11 +242,11 @@ function manualProcess() {
  */
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
-  ui.createMenu('🤖 블로그 자동화')
-    .addItem('대기 중인 요청 처리', 'manualProcess')
-    .addItem('빈 작성자(created_by) 채우기', 'manualFillCreatedBy')
+  ui.createMenu("🤖 블로그 자동화")
+    .addItem("대기 중인 요청 처리", "manualProcess")
+    .addItem("빈 작성자(created_by) 채우기", "manualFillCreatedBy")
     .addSeparator()
-    .addItem('트리거 설정 안내', 'showTriggerSetup')
+    .addItem("트리거 설정 안내", "showTriggerSetup")
     .toMenu();
 }
 
@@ -255,21 +258,21 @@ function manualFillCreatedBy() {
 
   if (result === undefined) {
     SpreadsheetApp.getUi().alert(
-      '알림',
-      '요청목록 시트를 찾을 수 없거나 사용자 이메일을 가져올 수 없습니다.',
-      SpreadsheetApp.getUi().ButtonSet.OK
+      "알림",
+      "요청목록 시트를 찾을 수 없거나 사용자 이메일을 가져올 수 없습니다.",
+      SpreadsheetApp.getUi().ButtonSet.OK,
     );
   } else if (result === 0) {
     SpreadsheetApp.getUi().alert(
-      '완료',
-      '채울 빈 작성자 필드가 없습니다.',
-      SpreadsheetApp.getUi().ButtonSet.OK
+      "완료",
+      "채울 빈 작성자 필드가 없습니다.",
+      SpreadsheetApp.getUi().ButtonSet.OK,
     );
   } else {
     SpreadsheetApp.getUi().alert(
-      '완료',
+      "완료",
       `${result}개 행의 작성자(created_by)를 현재 사용자 이메일로 채웠습니다.`,
-      SpreadsheetApp.getUi().ButtonSet.OK
+      SpreadsheetApp.getUi().ButtonSet.OK,
     );
   }
 }
@@ -304,28 +307,34 @@ function showTriggerSetup() {
 처음 실행 시 권한 승인이 필요합니다.
   `;
 
-  SpreadsheetApp.getUi().alert('트리거 설정 안내', message, SpreadsheetApp.getUi().ButtonSet.OK);
+  SpreadsheetApp.getUi().alert(
+    "트리거 설정 안내",
+    message,
+    SpreadsheetApp.getUi().ButtonSet.OK,
+  );
 }
 
 /**
  * Slack 알림 (선택사항)
  * 사용하려면 SLACK_WEBHOOK_URL 설정 필요
  */
-const SLACK_WEBHOOK_URL = ''; // Slack Webhook URL (선택사항)
+const SLACK_WEBHOOK_URL = ""; // Slack Webhook URL (선택사항)
 
 function sendSlackNotification(result) {
   if (!SLACK_WEBHOOK_URL) return;
 
-  const completedCount = result.results.filter(r => r.status === 'completed').length;
-  const errorCount = result.results.filter(r => r.status === 'error').length;
+  const completedCount = result.results.filter(
+    (r) => r.status === "completed",
+  ).length;
+  const errorCount = result.results.filter((r) => r.status === "error").length;
 
   const message = {
-    text: `📝 블로그 자동 생성 완료!\n✅ 성공: ${completedCount}건\n❌ 실패: ${errorCount}건`
+    text: `📝 블로그 자동 생성 완료!\n✅ 성공: ${completedCount}건\n❌ 실패: ${errorCount}건`,
   };
 
   UrlFetchApp.fetch(SLACK_WEBHOOK_URL, {
-    'method': 'POST',
-    'contentType': 'application/json',
-    'payload': JSON.stringify(message)
+    method: "POST",
+    contentType: "application/json",
+    payload: JSON.stringify(message),
   });
 }
