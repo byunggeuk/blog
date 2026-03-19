@@ -172,7 +172,7 @@ async function generateBlogContent(
 
   ## 형식 규칙
 
-  글의 구조는 다음을 따르세요: ##으로 대제목 1개, ###으로 소제목 6개, 소제목 없는 마무리 문단 1개.
+  글의 물리적 구조는 다음을 따르세요: ##으로 대제목 1개, ###으로 소제목 6개, 소제목 없는 마무리 문단 1개.
   대제목(##) 바로 다음에 인트로나 도입 문단 없이 곧바로 첫 번째 소제목(###)이 시작되어야 합니다.
   대제목은 반드시 "타겟 키워드, 나머지 부분" 형태로 작성하세요. 예: ## 회전근개파열, 어깨 통증의 원인과 치료법
   분량은 2000자에서 3000자 사이로 작성하세요.
@@ -231,7 +231,7 @@ async function generateBlogContent(
   **타겟 키워드:** ${targetKeyword}
   **주제:** ${topicKeyword}
   **목적:** ${purpose}
-  **구조:** ${formatType}${formatCustom ? `\n**추가 요청:** ${formatCustom}` : ""}
+  **전개 방식:** ${formatType}${formatCustom ? `\n**추가 요청:** ${formatCustom}` : ""}
 
   위 조건에 맞춰 완성된 블로그 글을 마크다운 형식으로 작성해주세요.`;
 
@@ -384,7 +384,7 @@ export async function POST() {
           {
             id: `msg_${Date.now()}_1`,
             role: "system",
-            content: `블로그 글 생성을 시작합니다.\n\n**타겟 키워드:** ${targetKeyword}\n**주제:** ${topicKeyword}\n**구조:** ${formatType}`,
+            content: `블로그 글 생성을 시작합니다.\n\n**타겟 키워드:** ${targetKeyword}\n**주제:** ${topicKeyword}\n**전개 방식:** ${formatType}`,
             created_at: now,
           },
           {

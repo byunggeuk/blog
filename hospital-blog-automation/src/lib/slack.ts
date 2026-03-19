@@ -187,7 +187,7 @@ export async function notifyNewRequest(params: {
             `• *요청 ID:* ${requestId}`,
             `• *타겟 키워드:* ${targetKeyword}`,
             `• *주제:* ${topicKeyword}`,
-            `• *글 구조:* ${formatType}`,
+            `• *전개 방식:* ${formatType}`,
             `• *요청자:* ${createdBy}`,
           ].join("\n"),
         },

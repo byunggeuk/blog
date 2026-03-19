@@ -385,7 +385,7 @@ export function EmployeeStatistics() {
                     <TableHead>요청일</TableHead>
                     <TableHead>병원</TableHead>
                     <TableHead>키워드</TableHead>
-                    <TableHead>글 구조</TableHead>
+                    <TableHead>전개 방식</TableHead>
                     <TableHead className="text-center">상태</TableHead>
                     <TableHead className="text-center">문서</TableHead>
                   </TableRow>

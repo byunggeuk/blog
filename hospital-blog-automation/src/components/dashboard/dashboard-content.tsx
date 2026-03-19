@@ -435,7 +435,9 @@ export function DashboardContent() {
                 <SortableHeader field="topic_keyword">
                   주제 키워드
                 </SortableHeader>
-                <TableHead className="w-[100px] text-center">구조</TableHead>
+                <TableHead className="w-[100px] text-center">
+                  전개 방식
+                </TableHead>
                 <SortableHeader field="purpose" className="min-w-[200px]">
                   목적
                 </SortableHeader>
@@ -658,10 +660,10 @@ export function DashboardContent() {
 
           <Select value={formatFilter} onValueChange={setFormatFilter}>
             <SelectTrigger className="w-full md:w-[150px]">
-              <SelectValue placeholder="전체 구조" />
+              <SelectValue placeholder="전체 전개 방식" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">전체 구조</SelectItem>
+              <SelectItem value="all">전체 전개 방식</SelectItem>
               {formatTypes.map((ft) => (
                 <SelectItem key={ft} value={ft}>
                   {ft}

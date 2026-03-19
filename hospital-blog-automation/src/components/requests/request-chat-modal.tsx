@@ -330,7 +330,7 @@ export function RequestChatModal({
               </summary>
               <div className="mt-3 space-y-2 text-sm">
                 <div>
-                  <span className="font-medium">구조:</span>{" "}
+                  <span className="font-medium">전개 방식:</span>{" "}
                   <Badge variant="outline" className="ml-1">
                     {currentRequest.format_type}
                   </Badge>

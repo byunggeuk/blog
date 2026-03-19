@@ -337,7 +337,7 @@ export const mockUsers: User[] = [
   },
 ];
 
-// 글 구조 옵션 (할루시네이션 방지를 위해 가상 사례 유발 옵션 제거)
+// 전개 방식 옵션 (할루시네이션 방지를 위해 가상 사례 유발 옵션 제거)
 export const formatOptions: {
   value: FormatType;
   label: string;

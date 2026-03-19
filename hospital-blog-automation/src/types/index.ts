@@ -22,7 +22,7 @@ export type RequestStatus =
   | "업로드완료"
   | "폐기";
 
-// 글 구조 타입
+// 전개 방식 타입
 export type FormatType =
   | "Q&A형"
   | "정보제공형"

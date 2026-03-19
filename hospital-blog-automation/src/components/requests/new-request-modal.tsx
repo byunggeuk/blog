@@ -174,14 +174,14 @@ export function NewRequestModal({ open, onOpenChange }: NewRequestModalProps) {
 
             <div className="space-y-2">
               <Label htmlFor="format_type" className="text-sm font-medium">
-                글의 구조 <span className="text-destructive">*</span>
+                전개 방식 <span className="text-destructive">*</span>
               </Label>
               <Select
                 value={formData.format_type}
                 onValueChange={handleFormatChange}
               >
                 <SelectTrigger id="format_type">
-                  <SelectValue placeholder="구조를 선택하세요" />
+                  <SelectValue placeholder="전개 방식을 선택하세요" />
                 </SelectTrigger>
                 <SelectContent>
                   {formatOptions.map((option) => (
@@ -206,11 +206,12 @@ export function NewRequestModal({ open, onOpenChange }: NewRequestModalProps) {
             {showCustomFormat && (
               <div className="space-y-2">
                 <Label htmlFor="format_custom" className="text-sm font-medium">
-                  글 구조 상세 설명 <span className="text-destructive">*</span>
+                  전개 방식 상세 설명{" "}
+                  <span className="text-destructive">*</span>
                 </Label>
                 <Textarea
                   id="format_custom"
-                  placeholder="원하는 글의 구조와 형식을 자세히 설명해주세요..."
+                  placeholder="원하는 전개 방식을 자세히 설명해주세요..."
                   className="min-h-[80px] resize-none"
                   value={formData.format_custom}
                   onChange={(e) =>

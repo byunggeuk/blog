@@ -62,80 +62,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     authStatus: "unauthenticated",
   });
 
-  // Sync user from session and register/check user in DB
-  useEffect(() => {
-    const syncUser = async () => {
-      if (session?.user) {
-        const sessionUser = session.user;
-
-        try {
-          // Register or get existing user from DB
-          const response = await fetch("/api/users", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              email: sessionUser.email,
-              name: sessionUser.name,
-            }),
-          });
-
-          const data = await response.json();
-
-          if (data.user) {
-            const dbUser = data.user;
-            let authStatus: AuthStatus = "unauthenticated";
-
-            if (dbUser.status === "approved") {
-              authStatus = "authenticated";
-            } else if (dbUser.status === "pending") {
-              authStatus = "pending";
-            } else if (dbUser.status === "blocked") {
-              authStatus = "blocked";
-            }
-
-            setState((prev) => ({
-              ...prev,
-              user: {
-                id: dbUser.id,
-                email: dbUser.email,
-                name: dbUser.name,
-                role: dbUser.role,
-                status: dbUser.status,
-                created_at: dbUser.created_at,
-                approved_at: dbUser.approved_at,
-                blocked_at: dbUser.blocked_at,
-              },
-              authStatus,
-            }));
-          }
-        } catch (error) {
-          console.error("사용자 동기화 실패:", error);
-          // Fallback to basic session user
-          setState((prev) => ({
-            ...prev,
-            user: {
-              id: sessionUser.email || "unknown",
-              email: sessionUser.email || "",
-              name: sessionUser.name || "",
-              role: "user",
-              status: "pending",
-              created_at: new Date().toISOString(),
-            },
-            authStatus: "pending",
-          }));
-        }
-      } else {
-        setState((prev) => ({
-          ...prev,
-          user: null,
-          authStatus: "unauthenticated",
-        }));
-      }
-    };
-
-    syncUser();
-  }, [session]);
-
   const loadInitialData = useCallback(
     async (userEmail?: string, isAdmin?: boolean) => {
       setState((prev) => ({ ...prev, isLoading: true }));
@@ -172,15 +98,109 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  // 사용자 인증 완료 후 데이터 로드 (본인 요청만 필터링)
+  // 유저 동기화 + 데이터 로드를 단일 useEffect에서 원자적으로 수행
   useEffect(() => {
-    if (state.authStatus === "authenticated" && state.user) {
-      loadInitialData(state.user.email, state.user.role === "admin");
-    } else if (state.authStatus === "unauthenticated") {
-      // 미인증 상태에서도 기본 데이터 로드 (병원 목록 등)
-      loadInitialData();
-    }
-  }, [state.authStatus, state.user?.email, state.user?.role, loadInitialData]);
+    let cancelled = false;
+
+    const syncUserAndLoadData = async () => {
+      if (!session?.user) {
+        // 로그아웃: 이전 유저 데이터 즉시 클리어
+        setState((prev) => ({
+          ...prev,
+          user: null,
+          requests: [],
+          users: [],
+          authStatus: "unauthenticated",
+        }));
+        loadInitialData();
+        return;
+      }
+
+      const sessionUser = session.user;
+
+      // 세션이 바뀌면 이전 유저의 데이터를 즉시 클리어
+      setState((prev) => ({
+        ...prev,
+        requests: [],
+        isLoading: true,
+      }));
+
+      try {
+        // 1단계: 유저 DB 동기화 완료까지 대기
+        const response = await fetch("/api/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: sessionUser.email,
+            name: sessionUser.name,
+          }),
+        });
+
+        if (cancelled) return;
+
+        const data = await response.json();
+
+        if (data.user) {
+          const dbUser = data.user;
+          let authStatus: AuthStatus = "unauthenticated";
+
+          if (dbUser.status === "approved") {
+            authStatus = "authenticated";
+          } else if (dbUser.status === "pending") {
+            authStatus = "pending";
+          } else if (dbUser.status === "blocked") {
+            authStatus = "blocked";
+          }
+
+          const user: User = {
+            id: dbUser.id,
+            email: dbUser.email,
+            name: dbUser.name,
+            role: dbUser.role,
+            status: dbUser.status,
+            created_at: dbUser.created_at,
+            approved_at: dbUser.approved_at,
+            blocked_at: dbUser.blocked_at,
+          };
+
+          setState((prev) => ({
+            ...prev,
+            user,
+            authStatus,
+          }));
+
+          // 2단계: 유저 확정 후 데이터 로드 (올바른 email로 필터링)
+          if (authStatus === "authenticated") {
+            await loadInitialData(user.email, user.role === "admin");
+          } else {
+            setState((prev) => ({ ...prev, isLoading: false }));
+          }
+        }
+      } catch (error) {
+        if (cancelled) return;
+        console.error("사용자 동기화 실패:", error);
+        setState((prev) => ({
+          ...prev,
+          user: {
+            id: sessionUser.email || "unknown",
+            email: sessionUser.email || "",
+            name: sessionUser.name || "",
+            role: "user",
+            status: "pending",
+            created_at: new Date().toISOString(),
+          },
+          authStatus: "pending",
+          isLoading: false,
+        }));
+      }
+    };
+
+    syncUserAndLoadData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session, loadInitialData]);
 
   const refreshData = useCallback(async () => {
     if (state.user) {
@@ -205,7 +225,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const systemMessage: ChatMessage = {
         id: `msg_${Date.now()}_1`,
         role: "system",
-        content: `블로그 글 생성을 시작합니다.\n\n**타겟 키워드:** ${data.target_keyword}\n**주제:** ${data.topic_keyword}\n**구조:** ${data.format_type}${data.format_custom ? `\n**추가 설명:** ${data.format_custom}` : ""}`,
+        content: `블로그 글 생성을 시작합니다.\n\n**타겟 키워드:** ${data.target_keyword}\n**주제:** ${data.topic_keyword}\n**전개 방식:** ${data.format_type}${data.format_custom ? `\n**추가 설명:** ${data.format_custom}` : ""}`,
         created_at: now,
       };
 
