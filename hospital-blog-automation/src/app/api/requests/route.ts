@@ -59,7 +59,10 @@ export async function GET(request: NextRequest) {
       let requests = await getRequests();
 
       // 관리자가 아니면 본인 요청만 필터링
-      if (!isAdmin && userEmail) {
+      if (!isAdmin) {
+        if (!userEmail) {
+          return NextResponse.json({ requests: [], source: "sheets" });
+        }
         requests = requests.filter((req) => req.created_by === userEmail);
       }
 
@@ -68,7 +71,10 @@ export async function GET(request: NextRequest) {
 
     // mock 데이터 반환 (필터링 적용)
     let requests = mockRequests;
-    if (!isAdmin && userEmail) {
+    if (!isAdmin) {
+      if (!userEmail) {
+        return NextResponse.json({ requests: [], source: "mock" });
+      }
       requests = requests.filter((req) => req.created_by === userEmail);
     }
     return NextResponse.json({ requests, source: "mock" });

@@ -223,7 +223,7 @@ ${contentRef.current.innerHTML}
           prose-p:text-base prose-p:leading-relaxed prose-p:my-4
           prose-ul:my-4 prose-ol:my-4
           prose-li:my-1
-          prose-blockquote:border-l-4 prose-blockquote:border-blue-500 prose-blockquote:bg-blue-50 prose-blockquote:pl-4 prose-blockquote:pr-4 prose-blockquote:py-3 prose-blockquote:rounded-r-lg prose-blockquote:not-italic prose-blockquote:text-gray-900 [&_blockquote_p]:text-gray-900 [&_blockquote]:text-gray-900
+          prose-blockquote:border-0 prose-blockquote:bg-transparent prose-blockquote:pl-0 prose-blockquote:pr-0 prose-blockquote:py-0 prose-blockquote:not-italic prose-blockquote:text-inherit [&_blockquote_p]:text-inherit [&_blockquote]:text-inherit
           prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none
           prose-pre:bg-slate-100 prose-pre:rounded-lg
           prose-strong:font-semibold
@@ -238,19 +238,16 @@ ${contentRef.current.innerHTML}
           remarkPlugins={[remarkGfm]}
           components={{
             blockquote: ({ children }) => (
-              <blockquote
+              <div
                 style={{
-                  borderLeft: "4px solid #3b82f6",
-                  backgroundColor: "#eff6ff",
-                  padding: "12px 16px",
-                  margin: "16px 0",
-                  borderRadius: "0 8px 8px 0",
-                  color: "#111827",
+                  margin: "0",
+                  padding: "0",
+                  color: "inherit",
                   fontStyle: "normal",
                 }}
               >
-                <div style={{ color: "#111827" }}>{children}</div>
-              </blockquote>
+                {children}
+              </div>
             ),
             p: ({ children, ...props }) => {
               // blockquote 내부의 p 태그는 부모에서 처리
