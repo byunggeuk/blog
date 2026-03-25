@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { google } from "googleapis";
-import Anthropic from "@anthropic-ai/sdk";
 import { getReferenceContents } from "@/lib/google-drive";
+import { generateBlog } from "@/lib/blog-generator";
 
 // Google Sheets 인증
 function getAuthClient() {
@@ -152,10 +152,10 @@ async function createMarkdownFile(
   };
 }
 
-// Claude API로 블로그 글 생성
+// Claude API로 블로그 글 생성 (2단계 생성 또는 단일 패스)
 async function generateBlogContent(
   hospitalName: string,
-  systemPrompt: string,
+  hospitalSystemPrompt: string,
   targetKeyword: string,
   topicKeyword: string,
   purpose: string,
@@ -163,88 +163,19 @@ async function generateBlogContent(
   formatCustom?: string,
   referenceText?: string,
 ) {
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-  const baseSystemPrompt =
-    `당신은 ${hospitalName}의 전문 의료 블로그 작성자입니다.
-
-  ${systemPrompt}
-
-  ## 형식 규칙
-
-  글의 물리적 구조는 다음을 따르세요: ##으로 대제목 1개, ###으로 소제목 6개, 소제목 없는 마무리 문단 1개.
-  대제목(##) 바로 다음에 인트로나 도입 문단 없이 곧바로 첫 번째 소제목(###)이 시작되어야 합니다.
-  대제목은 반드시 "타겟 키워드, 나머지 부분" 형태로 작성하세요. 예: ## 회전근개파열, 어깨 통증의 원인과 치료법
-  분량은 2000자에서 3000자 사이로 작성하세요.
-  소제목은 ###으로 표시하고, 항상 독자의 흥미를 유도하는 질문 형태로 작성하세요.
-  소제목 아래에는 바로 본문 문단이 시작되어야 합니다. 하위 소제목(####), 볼드체 항목명, 글머리 기호(-, *, 1.)로 정보를 정리하는 것은 금지입니다. 요점 정리나 나열이 아닌, 문단과 문단이 자연스럽게 이어지는 산문체로 작성하세요.
-  한 문단은 평균 여섯 문장 정도가 적당합니다.
-
-  ## 작성 규칙
-  1. 정확한 의료 정보를 바탕으로 작성
-  2. 환자가 이해하기 쉬운 언어 사용
-  3. SEO를 고려한 키워드 배치
-  4. 병원의 전문성과 신뢰성 강조
-
-  ## ⚠️ 최우선 원칙: 사실만 작성 (할루시네이션 절대 금지)
-
-  ### 절대 하지 말아야 할 것 (위반 시 글 전체가 무효):
-  - ❌ 구체적인 숫자/통계 사용 금지: "90%의 환자", "3배 빠른", "80% 이상", "10명 중 8명" 등
-  - ❌ 연구/논문 인용 금지: "연구에 따르면", "논문에서 밝혀진", "임상 결과" 등
-  - ❌ 가상의 환자 사례 작성 금지: "A씨는...", "30대 직장인 김씨", "실제 환자의 경우" 등
-  - ❌ 특정 기간/기한 단언 금지: "2주 안에 회복", "3개월 후에는", "1주일이면 충분" 등
-  - ❌ 병원 실적/성과 날조 금지: "수천 건의 시술 경험", "높은 성공률", "많은 환자분들이" 등
-  - ❌ 비교 우위 주장 금지: "가장 효과적인", "최고의 결과", "타 치료법보다 우수한" 등
-
-  ### 반드시 사용해야 하는 표현 방식:
-  - ✅ 정도 표현: "많은 경우", "일부 환자에서", "경우에 따라 다를 수 있음"
-  - ✅ 가능성 표현: "~할 수 있습니다", "~가 기대됩니다", "~에 도움이 될 수 있습니다"
-  - ✅ 일반론: "일반적으로", "통상적으로", "대체로"
-  - ✅ 개인차 강조: "개인마다 다를 수 있습니다", "전문의와 상담이 필요합니다"
-  - ✅ 조건부 표현: "~한 경우에는", "~라면", "상황에 따라"
-
-  ### 기간/효과 언급 시 필수 표현:
-  - "정확한 기간은 개인의 상태에 따라 달라집니다"
-  - "담당 전문의와의 상담을 통해 확인하시기 바랍니다"
-  - "일반적인 경우를 기준으로 하며, 개인차가 있을 수 있습니다"
-
-  ### 글 작성 시 자가 점검:
-  작성 후 다음 질문에 "예"라고 답할 수 있는 내용이 하나라도 있다면 해당 문장을 수정하세요:
-  1. 이 숫자/통계의 출처를 댈 수 있는가? → 출처 없으면 삭제
-  2. 이 환자 사례는 실제인가? → 가상이면 삭제 (가상 사례도 쓰지 마세요)
-  3. 이 기간/효과를 보장할 수 있는가? → 보장 못하면 "개인차가 있습니다" 추가
-  4. 이 비교/우위 주장의 근거가 있는가? → 근거 없으면 삭제` +
-    (referenceText
-      ? `
-
-  ## 참고자료
-  아래는 이 병원에서 제공한 참고자료입니다. 반드시 다음 규칙을 따르세요:
-  - 아래 참고자료에 포함된 정보를 우선적으로 활용하세요
-  - 참고자료에 없는 의료 정보는 '일반적으로 알려진 바에 따르면'과 같은 표현을 사용하세요
-  - 참고자료의 내용과 모순되는 내용을 절대 작성하지 마세요
-
-  ${referenceText}`
-      : "");
-
-  const userPrompt = `다음 조건에 맞는 블로그 글을 작성해주세요.
-
-  **타겟 키워드:** ${targetKeyword}
-  **주제:** ${topicKeyword}
-  **목적:** ${purpose}
-  **전개 방식:** ${formatType}${formatCustom ? `\n**추가 요청:** ${formatCustom}` : ""}
-
-  위 조건에 맞춰 완성된 블로그 글을 마크다운 형식으로 작성해주세요.`;
-
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-5-20250929",
-    max_tokens: 8096,
-    temperature: 0,
-    system: baseSystemPrompt,
-    messages: [{ role: "user", content: userPrompt }],
+  const result = await generateBlog({
+    apiKey: process.env.ANTHROPIC_API_KEY!,
+    hospitalName,
+    hospitalSystemPrompt,
+    targetKeyword,
+    topicKeyword,
+    purpose,
+    formatType,
+    formatCustom,
+    referenceText: referenceText || undefined,
   });
 
-  const textContent = response.content.find((block) => block.type === "text");
-  return textContent ? textContent.text : "";
+  return result.content;
 }
 
 // POST: 대기 중인 요청 처리

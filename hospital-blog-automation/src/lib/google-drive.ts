@@ -216,7 +216,8 @@ export async function getFileContentAsText(
 }
 
 // 참고자료 폴더의 모든 내용을 합쳐서 반환
-const MAX_REFERENCE_SIZE = 50000; // 최대 50,000자
+const MAX_REFERENCE_SIZE = 40000; // system 프롬프트 압축으로 여유 확보
+const MAX_PER_FILE = 12000; // 파일당 최대 12,000자
 
 export async function getReferenceContents(folderId: string): Promise<string> {
   const supportedMimeTypes = [
@@ -228,13 +229,15 @@ export async function getReferenceContents(folderId: string): Promise<string> {
 
   try {
     const files = await listFolderFiles(folderId);
-    const textFiles = files.filter(
-      (f) =>
-        supportedMimeTypes.includes(f.mimeType) ||
-        f.name.endsWith(".md") ||
-        f.name.endsWith(".txt") ||
-        f.name.endsWith(".csv"),
-    );
+    const textFiles = files
+      .filter(
+        (f) =>
+          supportedMimeTypes.includes(f.mimeType) ||
+          f.name.endsWith(".md") ||
+          f.name.endsWith(".txt") ||
+          f.name.endsWith(".csv"),
+      )
+      .sort((a, b) => a.name.localeCompare(b.name)); // 파일명 순 정렬
 
     if (textFiles.length === 0) {
       return "";
@@ -244,17 +247,26 @@ export async function getReferenceContents(folderId: string): Promise<string> {
 
     for (const file of textFiles) {
       try {
-        const content = await getFileContentAsText(file.id, file.mimeType);
+        let content = await getFileContentAsText(file.id, file.mimeType);
+
+        // 파일당 크기 제한
+        if (content.length > MAX_PER_FILE) {
+          content =
+            content.slice(0, MAX_PER_FILE) +
+            "\n\n...(이 파일의 나머지 내용은 용량 제한으로 생략됨)";
+        }
+
         const section = `### ${file.name}\n${content}\n\n`;
 
         if (totalContent.length + section.length > MAX_REFERENCE_SIZE) {
-          totalContent += `### ${file.name}\n(용량 제한으로 생략됨)\n\n`;
-          break;
+          totalContent += `### ${file.name}\n(전체 용량 제한으로 생략됨)\n\n`;
+          continue; // break → continue: 다음 파일도 시도
         }
 
         totalContent += section;
       } catch (error) {
         console.error(`참고자료 읽기 실패 (${file.name}):`, error);
+        continue; // 개별 파일 실패 시 계속 진행
       }
     }
 
