@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getReferenceContents } from "@/lib/google-drive";
 import { buildSystemPrompt } from "@/lib/prompts";
 import { generateBlog } from "@/lib/blog-generator";
+import { validateBlogStructure } from "@/lib/validators";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -122,8 +123,15 @@ ${referenceContents}
       );
     }
 
+    // 수정 결과도 구조 검증
+    const validation = validateBlogStructure(assistantMessage.text);
+    if (!validation.isValid) {
+      console.warn("[수정 결과 구조 규칙 위반]", validation.errors);
+    }
+
     return NextResponse.json({
       content: assistantMessage.text,
+      validation,
     });
   } catch (error) {
     console.error("Claude API Error:", error);
