@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { google } from "googleapis";
 import { getReferenceContents } from "@/lib/google-drive";
-import { generateBlog } from "@/lib/blog-generator";
+import { generateBlog, generateHtmlBlog, NEWSTYLE_LINKS } from "@/lib/blog-generator";
+import { LinkInfo } from "@/lib/prompts";
 
 // Google Sheets 인증
 function getAuthClient() {
@@ -40,7 +41,7 @@ async function getHospitalById(
 ) {
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: "병원설정!A2:I100",
+    range: "병원설정!A2:J100",
   });
 
   const rows = response.data.values || [];
@@ -54,10 +55,21 @@ async function getHospitalById(
         output_folder_id: row[4] || "",
         prompt_name: row[5] || "",
         system_prompt: row[6] || "",
+        output_format: (row[7] || "html").toLowerCase() as "markdown" | "html",
       };
     }
   }
   return null;
+}
+
+// 병원별 링크 정보 가져오기
+function getHospitalLinks(hospitalId: string): LinkInfo | undefined {
+  const linksByHospital: Record<string, LinkInfo> = {
+    "newstyle": NEWSTYLE_LINKS,
+    "뉴스타일": NEWSTYLE_LINKS,
+    "뉴스타일성형외과": NEWSTYLE_LINKS,
+  };
+  return linksByHospital[hospitalId];
 }
 
 // 요청 상태 업데이트
@@ -100,12 +112,13 @@ async function updateRequestStatus(
   });
 }
 
-// Google Drive에 마크다운 파일 생성 (공유 드라이브 필수)
-async function createMarkdownFile(
+// Google Drive에 파일 생성 (마크다운 또는 HTML)
+async function createOutputFile(
   drive: any,
   fileName: string,
   content: string,
-  folderId?: string,
+  folderId: string | undefined,
+  format: "markdown" | "html" = "html",
 ) {
   if (!folderId) {
     throw new Error(
@@ -113,16 +126,19 @@ async function createMarkdownFile(
     );
   }
 
+  const extension = format === "html" ? "html" : "md";
+  const mimeType = format === "html" ? "text/html" : "text/markdown";
+
   const fileMetadata: any = {
-    name: `${fileName}.md`,
-    mimeType: "text/markdown",
+    name: `${fileName}.${extension}`,
+    mimeType: mimeType,
     parents: [folderId],
   };
 
   const createResponse = await drive.files.create({
     requestBody: fileMetadata,
     media: {
-      mimeType: "text/markdown",
+      mimeType: mimeType,
       body: content,
     },
     fields: "id, webViewLink",
@@ -134,7 +150,6 @@ async function createMarkdownFile(
     throw new Error("파일 생성에 실패했습니다.");
   }
 
-  // 파일을 누구나 볼 수 있도록 권한 설정 (링크 공유)
   await drive.permissions.create({
     fileId: fileId,
     requestBody: {
@@ -155,6 +170,7 @@ async function createMarkdownFile(
 // Claude API로 블로그 글 생성 (2단계 생성 또는 단일 패스)
 async function generateBlogContent(
   hospitalName: string,
+  hospitalId: string,
   hospitalSystemPrompt: string,
   targetKeyword: string,
   topicKeyword: string,
@@ -162,20 +178,37 @@ async function generateBlogContent(
   formatType: string,
   formatCustom?: string,
   referenceText?: string,
+  outputFormat: "markdown" | "html" = "html",
 ) {
-  const result = await generateBlog({
-    apiKey: process.env.ANTHROPIC_API_KEY!,
-    hospitalName,
-    hospitalSystemPrompt,
-    targetKeyword,
-    topicKeyword,
-    purpose,
-    formatType,
-    formatCustom,
-    referenceText: referenceText || undefined,
-  });
-
-  return result.content;
+  if (outputFormat === "html") {
+    const links = getHospitalLinks(hospitalId);
+    const result = await generateHtmlBlog({
+      apiKey: process.env.ANTHROPIC_API_KEY!,
+      hospitalName,
+      hospitalSystemPrompt,
+      targetKeyword,
+      topicKeyword,
+      purpose,
+      formatType,
+      formatCustom,
+      referenceText: referenceText || undefined,
+      links,
+    });
+    return result.content;
+  } else {
+    const result = await generateBlog({
+      apiKey: process.env.ANTHROPIC_API_KEY!,
+      hospitalName,
+      hospitalSystemPrompt,
+      targetKeyword,
+      topicKeyword,
+      purpose,
+      formatType,
+      formatCustom,
+      referenceText: referenceText || undefined,
+    });
+    return result.content;
+  }
 }
 
 // POST: 대기 중인 요청 처리
@@ -293,6 +326,7 @@ export async function POST() {
 
         const content = await generateBlogContent(
           hospital.hospital_name,
+          hospital.hospital_id,
           hospital.system_prompt,
           targetKeyword,
           topicKeyword,
@@ -300,14 +334,16 @@ export async function POST() {
           formatType,
           formatCustom,
           referenceText,
+          hospital.output_format,
         );
 
         const fileName = `${targetKeyword}_${requestId}`;
-        const { fileId, fileUrl } = await createMarkdownFile(
+        const { fileId, fileUrl } = await createOutputFile(
           drive,
           fileName,
           content,
           hospital.output_folder_id,
+          hospital.output_format,
         );
 
         const now = formatDateForSheets();
